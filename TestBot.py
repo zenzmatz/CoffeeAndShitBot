@@ -9,6 +9,12 @@ import logging
 import datetime
 import re
 
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
 class TimerBot:
     def __init__(self, token):
         self.token = token
@@ -25,7 +31,7 @@ class TimerBot:
     def main(self):
         print "WIP"
         """Run bot."""
-        updater = Updater("TOKEN")
+        updater = Updater(self.token, use_context=True)
     
         self.users = []
        
@@ -44,7 +50,9 @@ class TimerBot:
         dp.add_handler(CommandHandler("block", self.block, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("deblock", self.deblock, pass_args=True, pass_chat_data=False))
         dp.add_handler(CallbackQueryHandler(self.button))
-    
+
+        dp.add_error_handler(self.error)
+
         updater.start_polling()
         updater.idle()
 
@@ -380,6 +388,9 @@ class TimerBot:
     
     def kevin(self, bot, update):
         bot.send_document(chat_id=update.message.chat_id, document=open('/home/zenzmatz/Telegram_Bot/nein.gif', 'rb'))
+
+    def error(self, bot, update, error):
+        logger.warning('Update "%s" caused error "%s"', update, error)
 
 TelegramBot = TimerBot("123456789ABCD")
 
