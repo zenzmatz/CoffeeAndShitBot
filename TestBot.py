@@ -33,24 +33,21 @@ class TimerBot:
     
         dp.add_handler(CommandHandler("start", self.start))
         dp.add_handler(CommandHandler("covfefe", self.covfefe, pass_args=True, pass_job_queue=True, pass_chat_data=True))
-        dp.add_handler(CommandHandler("covfefe_test", self.covfefe, pass_args=True, pass_job_queue=True, pass_chat_data=True))
         dp.add_handler(CommandHandler("abort", self.abort, pass_args=True, pass_chat_data=True))
         dp.add_handler(CommandHandler("abortion", self.abortion, pass_chat_data=True))
-        dp.add_handler(CommandHandler("metoo", self.metoo, pass_args=True, pass_chat_data=True))
-        dp.add_handler(CommandHandler("menot", self.menot, pass_args=True, pass_chat_data=True))
-        dp.add_handler(CommandHandler("list", self.list, pass_args=True, pass_chat_data=True))
-        dp.add_handler(CommandHandler("nukular", self.nukular, pass_args=True, pass_chat_data=True))
-        dp.add_handler(CommandHandler("kevin", self.kevin, pass_args=True, pass_chat_data=True))
+        dp.add_handler(CommandHandler("metoo", self.metoo, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("menot", self.menot, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("list", self.list, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("nukular", self.nukular, pass_args=False, pass_chat_data=False))
+        dp.add_handler(CommandHandler("kevin", self.kevin, pass_args=False, pass_chat_data=False))
         dp.add_handler(CommandHandler("attacke", self.attacke, pass_args=True, pass_chat_data=True))
-        dp.add_handler(CommandHandler("block", self.block, pass_args=True, pass_chat_data=True))
-        dp.add_handler(CommandHandler("deblock", self.deblock, pass_args=True, pass_chat_data=True))
+        dp.add_handler(CommandHandler("block", self.block, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("deblock", self.deblock, pass_args=True, pass_chat_data=False))
         dp.add_handler(CallbackQueryHandler(self.button))
-    
-        dp.add_error_handler(self.error)
     
         updater.start_polling()
         updater.idle()
-    
+
 #sub functions:
     def createTimer(self, bot, job, messageText, halfTime = False):
         userlist = ""
@@ -95,7 +92,7 @@ class TimerBot:
             username = user['username']
         return username
         
-    def cleanupEarly(self, bot, update, timername, chat_data):
+    def cleanupEarly(self, timername, chat_data):
         halftimename = 'halftime_' + timername
         if halftimename in chat_data:
             job = chat_data[halftimename]
@@ -252,7 +249,7 @@ class TimerBot:
             bot.send_message(chat_id=update.message.chat_id, text='Timer {} darf nur von {} aborted werden.....'.format(timername,self.creator[timername]))
             return
     
-        self.cleanupEarly(self, bot, update, timername, chat_data)
+        self.cleanupEarly(self, timername, chat_data)
 
         bot.send_message(chat_id=update.message.chat_id, text='{} abgebrochen!'.format(timername))
 
@@ -272,7 +269,7 @@ class TimerBot:
             userlist = userlist + "@" + str(u) + " "
         bot.send_message(chat_id=update.message.chat_id, text='{} wurde attackiert, auf gehts \n {}'.format(timername,userlist))
     
-        self.cleanupEarly(self, bot, update, timername, chat_data)
+        self.cleanupEarly(self, timername, chat_data)
     
     def abortion(self, bot, update, chat_data):
         username = self.createUser(self, update)
@@ -299,7 +296,7 @@ class TimerBot:
         else:
             bot.send_message(chat_id=update.message.chat_id, text='Kein Timer abgebrochen!')
 
-    def metoo(self, bot, update, args, chat_data):
+    def metoo(self, bot, update, args):
         timername = self.getTimerName(self, args)
     
         if self.checkTimer(self, bot, update, timername):
@@ -315,7 +312,7 @@ class TimerBot:
         else:
             bot.send_message(chat_id=update.message.chat_id, text='Wie oft willst noch mitgehen?')
 
-    def menot(self, bot, update, args, chat_data):
+    def menot(self, bot, update, args):
         timername = self.getTimerName(self, args)
     
         if self.checkTimer(self, bot, update, timername):
@@ -332,10 +329,56 @@ class TimerBot:
             pass
 #            bot.send_message(chat_id=update.message.chat_id, text='Du depp gehst eh net mit....')
 
-    def nukular(self, bot, update, args, chat_data):
+    def list(self, bot, update, args):
+        try:
+            userlist = ""
+            timername = ""
+            try:
+                timername = str(args[0])
+            except (IndexError, ValueError):
+                if len(self.hilfs_dic) == 1:
+                    timername = next(iter(self.hilfs_dic))
+                elif len(self.hilfs_dic) == 0:
+                    bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden...')
+                    return
+                else:
+                    timerlist = ""
+                    for key in self.hilfs_dic:
+                        timerlist = timerlist + str(key) + " "
+                    bot.send_message(chat_id=update.message.chat_id, text='Timer: {}'.format(timerlist))
+                    return
+    
+            if timername not in self.hilfs_dic:
+                bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(timername))
+                return
+            for u in self.user_data[timername]:
+                userlist = userlist + str(u) + " "
+            difftime = self.time_dic[timername] - datetime.datetime.now()
+            timeto = int(difftime.total_seconds() / 60)
+            bot.send_message(chat_id=update.message.chat_id, text='{} um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist))        
+        except (IndexError, ValueError):
+            timerlist = ""
+            for key in self.hilfs_dic:
+                timerlist = timerlist + str(key) + " "
+            bot.send_message(chat_id=update.message.chat_id, text='Timer: {}'.format(timerlist))
+
+    def block(self, bot, update, args):
+        username = str(args[0])
+    
+        self.black_list[username] = username
+        bot.send_message(chat_id=update.message.chat_id, text='{} darf nicht mehr abtreiben'.format(username))
+    
+    def deblock(self, bot, update, args):
+        username = str(args[0])
+
+        if username in self.black_list:
+            del self.black_list[username]
+            bot.send_message(chat_id=update.message.chat_id, text='{} darf wieder abtreiben'.format(username))
+
+    def nukular(self, bot, update):
         bot.send_photo(chat_id=update.message.chat_id, photo=open('/home/zenzmatz/Telegram_Bot/nucular_simpsons.jpg', 'rb'))
     
-    def kevin(self, bot, update, args, chat_data):
+    def kevin(self, bot, update):
         bot.send_document(chat_id=update.message.chat_id, document=open('/home/zenzmatz/Telegram_Bot/nein.gif', 'rb'))
 
 TelegramBot = TimerBot("123456789ABCD")
