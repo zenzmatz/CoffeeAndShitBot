@@ -27,8 +27,7 @@ class TimerBot:
         """Run bot."""
         updater = Updater("TOKEN")
     
-        global users
-        users = []
+        self.users = []
        
         dp = updater.dispatcher
     
@@ -87,6 +86,30 @@ class TimerBot:
             return True
         else:
             return False
+
+    def createUser(self, update):
+        user = update.message.from_user
+        if user['username'] == 'None' or user['username'] is None:
+            username = user['first_name']
+        else:
+            username = user['username']
+        return username
+        
+    def cleanupEarly(self, bot, update, timername, chat_data):
+        halftimename = 'halftime_' + timername
+        if halftimename in chat_data:
+            job = chat_data[halftimename]
+            job.schedule_removal()
+            del chat_data[halftimename]
+            del self.half_dic[halftimename]
+    
+        job = chat_data[timername]
+        job.schedule_removal()
+        del chat_data[timername]
+        del self.hilfs_dic[timername]
+        del self.time_dic[timername]
+        if timername in self.anti_spam:
+            del self.anti_spam[timername]
     
 #main functions
     def start(self, bot, update):
@@ -150,30 +173,25 @@ class TimerBot:
                             return
                 if due > 5:
                     halftimename = 'halftime_' + timername
-                    job = job_queue.run_once(halftime, (due-5)*60, context=chat_id)
+                    job = job_queue.run_once(self.halftime, (due-5)*60, context=chat_id)
                     chat_data[halftimename] = job
-                    half_dic[halftimename] = job
+                    self.half_dic[halftimename] = job
     
-                job = job_queue.run_once(alarm, due*60, context=chat_id)
+                job = job_queue.run_once(self.alarm, due*60, context=chat_id)
                 chat_data[timername] = job
     
                 self.hilfs_dic[timername] = job
-    
-                user = update.message.from_user
-                if user['username'] == 'None' or user['username'] is None:
-                    username = user['first_name']
-                else:
-                    username = user['username']
-    
+                
+                username = self.createUser(self, update)
                 usernames = [username]
                 self.user_data[timername] = usernames
     
-                global creator
-                creator[timername] = username
-            keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
-                        InlineKeyboardButton("menot", callback_data=timername+":0")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            update.message.reply_text('{} hat {} Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,self.time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
+                self.creator[timername] = username
+
+                keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
+                             InlineKeyboardButton("menot", callback_data=timername+":0")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                update.message.reply_text('{} hat {} Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,self.time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
     
             except (IndexError, ValueError):
                 bot.send_message(chat_id=update.message.chat_id, text='Usage: /covfefe <minutes> <timername>')
@@ -191,10 +209,7 @@ class TimerBot:
             bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(args[0]))
             return
     
-        if user['username'] == 'None' or user['username'] is None:
-            username = user['first_name']
-        else:
-            username = user['username']
+        username = self.createUser(self, update)
     
         if yes == "1":
             if not username in self.user_data[timername]:
@@ -202,16 +217,16 @@ class TimerBot:
                 usernames.append(username)
                 self.user_data[timername] = usernames
                 bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht mit'.format(timername, username))
-        else:
-            pass
-    #            bot.send_message(chat_id=query.message.chat_id, text='Wie oft willst noch mitgehen?')
+            else:
+                pass
+    #                bot.send_message(chat_id=query.message.chat_id, text='Wie oft willst noch mitgehen?')
         else:
             usernames = self.user_data[timername]
             if username in usernames:
                 usernames.remove(username)
                 self.user_data[timername] = usernames
                 bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht doch net mit'.format(timername, username))
-        else:
+            else:
                 if timername in self.anti_spam:
                     if not username in self.anti_spam[timername]:
                         bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht nicht mit'.format(timername, username))
@@ -227,85 +242,41 @@ class TimerBot:
                     self.anti_spam[timername] = usernames
 
     def abort(self, bot, update, args, chat_data):
-        global kb_remove
         timername = self.getTimerName(self, args)
-        return if self.checkTimer(self, bot, update, timername)
-    
-        user = update.message.from_user
-        if user['username'] == 'None' or user['username'] is None:
-            username = user['first_name']
-        else:
-            username = user['username']
-        global creator
-        if not username == creator[timername]:
-            bot.send_message(chat_id=update.message.chat_id, text='Timer {} darf nur von {} aborted werden.....'.format(timername,creator[timername]))
+        if self.checkTimer(self, bot, update, timername):
             return
     
-        halftimename = 'halftime_' + timername
-        if halftimename in chat_data:
-            job = chat_data[halftimename]
-            job.schedule_removal()
-            del chat_data[halftimename]
-            del half_dic[halftimename]
+        username = self.createUser(self, update)
+        
+        if not username == self.creator[timername]:
+            bot.send_message(chat_id=update.message.chat_id, text='Timer {} darf nur von {} aborted werden.....'.format(timername,self.creator[timername]))
+            return
     
-        job = chat_data[timername]
-        job.schedule_removal()
-        del chat_data[timername]
-        del hilfs_dic[timername]
-        global time_dic
-        del time_dic[timername]
-        if timername in anti_spam:
-            del anti_spam[timername]
+        self.cleanupEarly(self, bot, update, timername, chat_data)
 
         bot.send_message(chat_id=update.message.chat_id, text='{} abgebrochen!'.format(timername))
 
     def attacke(self, bot, update, args, chat_data):
-        global kb_remove
         timername = self.getTimerName(self, args)
-        return if self.checkTimer(self, bot, update, timername)
+        if self.checkTimer(self, bot, update, timername):
+            return
     
-        user = update.message.from_user
-        if user['username'] == 'None' or user['username'] is None:
-            username = user['first_name']
-        else:
-            username = user['username']
-        global creator
-        if not username == creator[timername]:
-            bot.send_message(chat_id=update.message.chat_id, text='Timer {} darf nur von {} attackiert werden.....'.format(timername,creator[timername]))
+        username = self.createUser(self, update)
+        
+        if not username == self.creator[timername]:
+            bot.send_message(chat_id=update.message.chat_id, text='Timer {} darf nur von {} attackiert werden.....'.format(timername,self.creator[timername]))
             return
     
         userlist = ""
-        global user_data
-        for u in user_data[timername]:
+        for u in self.user_data[timername]:
             userlist = userlist + "@" + str(u) + " "
         bot.send_message(chat_id=update.message.chat_id, text='{} wurde attackiert, auf gehts \n {}'.format(timername,userlist))
     
-        halftimename = 'halftime_' + timername
-        if halftimename in chat_data:
-            job = chat_data[halftimename]
-            job.schedule_removal()
-            del chat_data[halftimename]
-            del half_dic[halftimename]
-    
-        job = chat_data[timername]
-        job.schedule_removal()
-        del chat_data[timername]
-        del hilfs_dic[timername]
-        global time_dic
-        del time_dic[timername]
-        if timername in anti_spam:
-            del anti_spam[timername]
+        self.cleanupEarly(self, bot, update, timername, chat_data)
     
     def abortion(self, bot, update, chat_data):
-        global kb_remove
-        user = update.message.from_user
-        if user['username'] == 'None' or user['username'] is None:
-            username = user['first_name']
-        else:
-            username = user['username']
-    
-        global black_list
-        if not username in black_list:
+        username = self.createUser(self, update)
+        if not username in self.black_list:
             if not bool(chat_data):
                 bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
                 return
@@ -319,15 +290,53 @@ class TimerBot:
                     job = chat_data[halftimename]
                     job.schedule_removal()
             chat_data.clear()
-            hilfs_dic.clear()
-            half_dic.clear()
-            global time_dic
-            time_dic.clear()
-            anti_spam.clear()
+            self.hilfs_dic.clear()
+            self.half_dic.clear()
+            self.time_dic.clear()
+            self.anti_spam.clear()
     
             bot.send_message(chat_id=update.message.chat_id, text='Alle Timer abgebrochen!')
         else:
             bot.send_message(chat_id=update.message.chat_id, text='Kein Timer abgebrochen!')
+
+    def metoo(self, bot, update, args, chat_data):
+        timername = self.getTimerName(self, args)
+    
+        if self.checkTimer(self, bot, update, timername):
+            return
+    
+        username = self.createUser(self, update)
+    
+        if not username in self.user_data[timername]:
+            usernames = self.user_data[timername]
+            usernames.append(username)
+            self.user_data[timername] = usernames
+            bot.send_message(chat_id=update.message.chat_id, text='{}: {} geht mit'.format(timername, username))
+        else:
+            bot.send_message(chat_id=update.message.chat_id, text='Wie oft willst noch mitgehen?')
+
+    def menot(self, bot, update, args, chat_data):
+        timername = self.getTimerName(self, args)
+    
+        if self.checkTimer(self, bot, update, timername):
+            return
+    
+        username = self.createUser(self, update)
+
+        usernames = self.user_data[timername]
+        if username in usernames:
+            usernames.remove(username)
+            self.user_data[timername] = usernames
+            bot.send_message(chat_id=update.message.chat_id, text='{}: {} geht doch net mit'.format(timername, username))
+        else:
+            pass
+#            bot.send_message(chat_id=update.message.chat_id, text='Du depp gehst eh net mit....')
+
+    def nukular(self, bot, update, args, chat_data):
+        bot.send_photo(chat_id=update.message.chat_id, photo=open('/home/zenzmatz/Telegram_Bot/nucular_simpsons.jpg', 'rb'))
+    
+    def kevin(self, bot, update, args, chat_data):
+        bot.send_document(chat_id=update.message.chat_id, document=open('/home/zenzmatz/Telegram_Bot/nein.gif', 'rb'))
 
 TelegramBot = TimerBot("123456789ABCD")
 
