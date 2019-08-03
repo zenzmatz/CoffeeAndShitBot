@@ -8,6 +8,8 @@ import telegram
 import logging
 import datetime
 import re
+import AdvancedHTMLParser
+import requests
 
 #enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -49,6 +51,7 @@ class TimerBot:
         dp.add_handler(CommandHandler("block", self.block, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("deblock", self.deblock, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("blocklist", self.blocklist, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("wetter", self.weather, pass_args=True, pass_chat_data=False)) 
         dp.add_handler(CallbackQueryHandler(self.button))
 
         dp.add_error_handler(self.error)
@@ -393,6 +396,61 @@ class TimerBot:
                 return
         bot.send_message(chat_id=update.message.chat_id, text='Abtreibungsverbot für: {}'.format(blocked_names))
 
+    def weather(self, bot, update, args):
+        try:
+            days = int(args[1])
+        except (IndexError, ValueError):
+            days = 1
+
+        try:
+            location = str(args[0])
+        except (IndexError, ValueError):
+            bot.send_message(chat_id=update.message.chat_id, text='An Ort musst schon angeben....')
+            return
+
+        page = requests.get('https://www.bergfex.at/sommer/' + location + '/wetter/prognose')
+        parser = AdvancedHTMLParser.AdvancedHTMLParser()
+        parser.parseStr(page.content)
+    
+        masterkeys = []
+        for i in range(0,days):
+            masterkeys.append("forecast-day-" + str(i))
+
+        masterdic = dict.fromkeys(masterkeys, {})
+
+        datakeys = ['tmax','tmin','rrp','rrr','sonne','sgrenze','wgew']
+
+        dataReplaceKeys = {'tmax':      'Max. Temperatur',
+                           'tmin':      'Min. Temperatur',
+                           'rrp':       'Regenwahrscheinlichkeit',
+                           'rrr':       'Regenmenge in Liter',
+                           'sonne':     'Sonnenstunden',
+                           'sgrenze':   'Schneefallgrenze',
+                           'wgew':      'Gewitterwahrscheinlichkeit'}
+
+        datadic = dict.fromkeys(datakeys, "-")
+
+        messageOutput = ""
+        for m in sorted(masterdic.keys()):
+            if m == "forecast-day-0":
+                mFormated = "Heute:"
+            elif m == "forecast-day-1":
+                mFormated = "\nMorgen:"
+            else:
+                mFormated = "\nIn " + m.strip('forecast-day-') + " Tagen :"
+            messageOutput = messageOutput + mFormated + "\n"
+
+            day = parser.getElementById(m)
+
+            if day is None:
+                bot.send_message(chat_id=update.message.chat_id, text='Keine Daten für: {} für die nächsten {} Tage'.format(location,str(days)))
+                return
+
+            for k in datadic:
+                datadic[k] = day.getElementsByClassName(k)[0].innerHTML.strip()
+                messageOutput = messageOutput + dataReplaceKeys[k] + ": " + datadic[k] + "\n"
+
+        bot.send_message(chat_id=update.message.chat_id, text='Wetterinfo: \n{}'.format(messageOutput))
 
     def nukular(self, bot, update):
         bot.send_photo(chat_id=update.message.chat_id, photo=open('/home/zenzmatz/Telegram_Bot/nucular_simpsons.jpg', 'rb'))
