@@ -48,6 +48,7 @@ class TimerBot:
         dp.add_handler(CommandHandler("attacke", self.attacke, pass_args=True, pass_chat_data=True))
         dp.add_handler(CommandHandler("block", self.block, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("deblock", self.deblock, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("blocklist", self.blocklist, pass_args=True, pass_chat_data=False))
         dp.add_handler(CallbackQueryHandler(self.button))
 
         dp.add_error_handler(self.error)
@@ -382,6 +383,16 @@ class TimerBot:
         if username in self.black_list:
             del self.black_list[username]
             bot.send_message(chat_id=update.message.chat_id, text='{} darf wieder abtreiben'.format(username))
+
+    def blocklist(self, bot, update):
+        try:
+            blocked_names = str(self.black_list).strip('[]').replace('\'','')
+        except (IndexError, ValueError):
+            if len(self.black_list) == 0:
+                bot.send_message(chat_id=update.message.chat_id, text='Es gibt keine Abtreibungsverbot')
+                return
+        bot.send_message(chat_id=update.message.chat_id, text='Abtreibungsverbot für: {}'.format(blocked_names))
+
 
     def nukular(self, bot, update):
         bot.send_photo(chat_id=update.message.chat_id, photo=open('/home/zenzmatz/Telegram_Bot/nucular_simpsons.jpg', 'rb'))
