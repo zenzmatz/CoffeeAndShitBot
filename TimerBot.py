@@ -71,9 +71,19 @@ class TimerBot:
             del self.hilfs_dic[utimername]
             del self.time_dic[utimername]
 
+    def createTimerName(self, bot, update, args):
+        try:
+            timername = str(args[1:]).strip('[]').replace('\'','').replace(',','')
+        except (IndexError, ValueError):
+            timername = 'covfefe'
+        if timername in self.hilfs_dic:
+            bot.send_message(chat_id=update.message.chat_id, text='Den Timer {} gibts schon!!!!'.format(timername))
+            return
+        return timername
+
     def getTimerName(self, args):
         try:
-            timername = str(args[0])
+            timername = str(args[0:]).strip('[]').replace('\'','').replace(',','')
         except (IndexError, ValueError):
             if len(self.hilfs_dic) == 1:
                 timername = next(iter(self.hilfs_dic))
@@ -130,19 +140,10 @@ class TimerBot:
     def covfefe(self, bot, update, args, job_queue, chat_data):
         chat_id = update.message.chat_id
         user = update.message.from_user
-        mini = datetime.datetime.combine(datetime.date.today(), datetime.time(6, 0, 0))
-        maxi = datetime.datetime.combine(datetime.date.today(), datetime.time(19, 0, 0))
     
-        try:
-            timername = str(args[1])
-            namecheck = re.compile('[a-zA-Z0-9_]+')
-            if not namecheck.match(timername):
-                bot.send_message(chat_id=update.message.chat_id, text='Gib dem Timer bitte an richtigen Namen...!!!!')
-                return
-        except (IndexError, ValueError):
-            timername = 'covfefe'
-        if timername in self.hilfs_dic:
-            bot.send_message(chat_id=update.message.chat_id, text='Den Timer gibts schon du Depp!!!!')
+        timername = self.createTimerName(bot, update, args)
+        if timername is None:
+            return
         else:
             if timername in chat_data:
                 job = chat_data[timername]
@@ -153,28 +154,25 @@ class TimerBot:
                     rawinput = str(args[0])
                     rawhour = int(rawinput.split(":")[0])
                     rawmin = int(rawinput.split(":")[1])
-                    if rawhour > 6 and rawhour < 19 and rawmin >= 0 and rawmin < 60:
+                    if rawhour > 0 and rawhour < 24 and rawmin >= 0 and rawmin < 60:
                         endtime = datetime.datetime.combine(datetime.date.today(), datetime.time(rawhour, rawmin, 0))
                         self.time_dic[timername] = endtime
                         difftime = endtime - datetime.datetime.now()
                         due = int(difftime.total_seconds() / 60)
                         if due < 0 or due == 0:
-                            bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Uhrzeit ein')
+                            bot.send_message(chat_id=update.message.chat_id, text='A bissl mehr Zeit muast den anderen schon lassen')
                             return
                     else:
-                        bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Uhrzeit ein')
+                        bot.send_message(chat_id=update.message.chat_id, text='Was gscheides für die Uhrzeit solltest schon angeben')
                         return
                 else:
                     due = int(args[0])
                     if due < 0 or due == 0:
-                        bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Minuten ein')
+                        bot.send_message(chat_id=update.message.chat_id, text='A bissl mehr Zeit muast den anderen schon lassen')
                         return
                     else:
                         deltatime = datetime.datetime.now() + datetime.timedelta(minutes=due)
                         self.time_dic[timername] = deltatime
-                        if deltatime < mini or deltatime > maxi:
-                            bot.send_message(chat_id=update.message.chat_id, text='Computer says no...')
-                            return
                 if due > 5:
                     halftimename = 'halftime_' + timername
                     job = job_queue.run_once(self.halftime, (due-5)*60, context=chat_id)
@@ -344,7 +342,7 @@ class TimerBot:
             userlist = ""
             timername = ""
             try:
-                timername = str(args[0])
+                timername = str(args[0:]).strip('[]').replace('\'','').replace(',','')
             except (IndexError, ValueError):
                 if len(self.hilfs_dic) == 1:
                     timername = next(iter(self.hilfs_dic))
