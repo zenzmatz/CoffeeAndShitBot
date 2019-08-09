@@ -49,7 +49,7 @@ def alarm(bot, job):
     userlist = ""
     global hilfs_dic
     for key,val in hilfs_dic.iteritems():
-	if val == job:
+        if val == job:
             utimername = key
     global user_data
     for u in user_data[utimername]:
@@ -227,10 +227,10 @@ def covfefe_test(bot, update, args, job_queue, chat_data):
 
             global creator
             creator[timername] = username
-	    keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
+            keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
 	                InlineKeyboardButton("menot", callback_data=timername+":0")]]
-	    reply_markup = InlineKeyboardMarkup(keyboard)
-	    update.message.reply_text('{} hat {} Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text('{} hat {} Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
 
         except (IndexError, ValueError):
             bot.send_message(chat_id=update.message.chat_id, text='Usage: /covfefe <minutes> <timername>')
@@ -260,8 +260,8 @@ def button(bot, update):
             usernames.append(username)
             user_data[timername] = usernames
             bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht mit'.format(timername, username))
-	else:
-	    pass
+        else:
+            pass
 #            bot.send_message(chat_id=query.message.chat_id, text='Wie oft willst noch mitgehen?')
     else:
         usernames = user_data[timername]
@@ -269,13 +269,13 @@ def button(bot, update):
             usernames.remove(username)
             user_data[timername] = usernames
             bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht doch net mit'.format(timername, username))
-	else:
+        else:
             global anti_spam
             if timername in anti_spam:
                 if not username in anti_spam[timername]:
                     bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht nicht mit'.format(timername, username))
                     usernames = anti_spam[timername]
-      		    usernames.append(username)
+                    usernames.append(username)
                     anti_spam[timername] = usernames
                 else:
                     pass
@@ -458,7 +458,7 @@ def deblock(bot, update, args, chat_data):
 
     global black_list
     if username in black_list:
-	del black_list[username]
+        del black_list[username]
 
 def menot(bot, update, args, chat_data):
     global kb_remove
@@ -500,7 +500,7 @@ def list(bot, update, args, chat_data):
     global kb_remove
     try:
         userlist = ""
-	timername = ""
+        timername = ""
         try:
             timername = str(args[0])
         except (IndexError, ValueError):
@@ -508,7 +508,7 @@ def list(bot, update, args, chat_data):
                 timername = next(iter(hilfs_dic))
             elif len(hilfs_dic) == 0:
                 bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden...')
-		return
+                return
             else:
                 timerlist = ""
                 for key in hilfs_dic:
@@ -540,6 +540,47 @@ def kevin(bot, update, args, chat_data):
     global kb_remove
     bot.send_document(chat_id=update.message.chat_id, document=open('/home/zenzmatz/Telegram_Bot/nein.gif', 'rb'))
 
+def cm(bot, update, args, chat_data):
+    from decimal import Decimal, ROUND_HALF_UP
+    try:
+        celcius = float(args[0])
+        mordor = Decimal((celcius-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
+        bot.send_message(chat_id=update.message.chat_id, text="*%s°C* san *%s°M*" %(celcius, mordor), parse_mode="Markdown")
+    except:
+        bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. kann i net umrechnen. vielleicht muast wos gscheits angeben")
+
+def mordor(bot, update, args, chat_data):
+  import requests
+  import json
+  import random
+  from decimal import Decimal, ROUND_HALF_UP
+
+  texts = [
+      "wir ham *%s°M* in *%s*",
+      "Michse denken wir *%s°M* haben in *%s*",
+      "Meine innere Stimme sagt mir wir haben *%s°M* in *%s*",
+      "Ein Ring sie zu knechten, ins Dunkel zu treibn...Aso, nur die Temperatur. Alsdann: *%s°M* in *%s*"
+  ]
+
+  text = random.choice(texts)
+
+  name = ""
+  for arg in args:
+      name += arg
+      name += " "
+
+  try:
+    response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % name)
+
+    data = response.json()
+    temp=data["main"]["temp"]
+    mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)#round((temp-29)/2)
+    tmp_str = text % (mordor, data["name"])
+    bot.send_message(chat_id=update.message.chat_id, text=tmp_str, parse_mode="Markdown")
+  except:
+    bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. hob kane wetterdaten für di")
+    bot.send_message(chat_id=update.message.chat_id, text="probiers mal mit /mordor <die ortschaft>")
+
 def main():
     """Run bot."""
     updater = Updater("TOKEN")
@@ -562,6 +603,8 @@ def main():
     dp.add_handler(CommandHandler("attacke", attacke, pass_args=True, pass_chat_data=True))
     dp.add_handler(CommandHandler("block", block, pass_args=True, pass_chat_data=True))
     dp.add_handler(CommandHandler("deblock", deblock, pass_args=True, pass_chat_data=True))
+    dp.add_handler(CommandHandler("mordor", mordor, pass_args=True, pass_chat_data=True))
+    dp.add_handler(CommandHandler("cm", cm, pass_args=True, pass_chat_data=True))
 
     dp.add_handler(CallbackQueryHandler(button))
 
