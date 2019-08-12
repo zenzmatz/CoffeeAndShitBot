@@ -81,7 +81,6 @@ class TimerBot:
 
     def createTimerName(self, bot, update, args):
         try:
-            print str(args[1:])
             timername = str(args[1:]).strip('[]').replace('u\'','').replace('\'','').replace(',','')
         except (IndexError, ValueError):
             timername = 'covfefe'
@@ -93,6 +92,8 @@ class TimerBot:
     def getTimerName(self, args):
         try:
             timername = str(args[0:]).strip('[]').replace('u\'','').replace('\'','').replace(',','')
+            if timername == "":
+                raise ValueError
         except (IndexError, ValueError):
             if len(self.hilfs_dic) == 1:
                 timername = next(iter(self.hilfs_dic))
@@ -141,6 +142,42 @@ class TimerBot:
     def halftime(self, bot, job):
         messageText = 'Noch 5 Minuten bis "{}" !! \n {}'
         self.createTimer(bot, job, messageText, True)
+
+    def joinTimer(self, bot, chatId, username, timername):
+        if not username in self.user_data[timername]:
+            usernames = self.user_data[timername]
+            usernames.append(username)
+            self.user_data[timername] = usernames
+            if username in self.anti_spam[timername]:
+                usernames = self.anti_spam[timername]
+                usernames.remove(username)
+                self.anti_spam[timername] = usernames
+            bot.send_message(chat_id=chatId, text='"{}": {} geht mit'.format(timername, username))
+        else:
+            bot.send_message(chat_id=chatId, text='Wie oft willst noch mitgehen?')
+    
+    def leaveTimer(self, bot, chatId, username, timername):
+        usernames = self.user_data[timername]
+        if username in usernames:
+            usernames.remove(username)
+            self.user_data[timername] = usernames
+
+            try:
+                usernames = self.anti_spam[timername]
+            except (KeyError):
+                usernames = []
+            usernames.append(username)
+            self.anti_spam[timername] = usernames
+
+            bot.send_message(chat_id=chatId, text='"{}": {} geht doch net mit'.format(timername, username))
+        else:
+            if not username in self.anti_spam[timername]:
+                usernames = self.anti_spam[timername]
+                usernames.append(username)
+                self.anti_spam[timername] = usernames
+                bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
+            else:
+                bot.send_message(chat_id=chatId, text='Du gehst eh net mit....')
 
 #   main functions, called by main
     def start(self, bot, update):
@@ -212,48 +249,19 @@ class TimerBot:
         timername = query.data.split(":")[0]
         yes = query.data.split(":")[1]
         user = update.callback_query.from_user
-    
-        if not bool(self.hilfs_dic):
-            bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
-            return
-        elif timername not in self.hilfs_dic:
-            bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" gibts net.....'.format(timername))
-            return
 
+        if self.checkTimer(bot, update, timername):
+            return
+    
         if user['username'] == 'None' or user['username'] is None:
             username = user['first_name']
         else:
             username = user['username']
-    
+
         if yes == "1":
-            if not username in self.user_data[timername]:
-                usernames = self.user_data[timername]
-                usernames.append(username)
-                self.user_data[timername] = usernames
-                bot.send_message(chat_id=query.message.chat_id, text='"{}": {} geht mit'.format(timername, username))
-            else:
-                pass
-    #                bot.send_message(chat_id=query.message.chat_id, text='Wie oft willst noch mitgehen?')
+            self.joinTimer(bot, query.message.chat_id, username, timername)
         else:
-            usernames = self.user_data[timername]
-            if username in usernames:
-                usernames.remove(username)
-                self.user_data[timername] = usernames
-                bot.send_message(chat_id=query.message.chat_id, text='"{}": {} geht doch net mit'.format(timername, username))
-            else:
-                if timername in self.anti_spam:
-                    if not username in self.anti_spam[timername]:
-                        bot.send_message(chat_id=query.message.chat_id, text='"{}": {} geht nicht mit'.format(timername, username))
-                        usernames = self.anti_spam[timername]
-                        usernames.append(username)
-                        self.anti_spam[timername] = usernames
-                    else:
-                        pass
-                else:
-                    bot.send_message(chat_id=query.message.chat_id, text='"{}": {} geht nicht mit'.format(timername, username))
-                    usernames = self.anti_spam[timername]
-                    usernames.append(username)
-                    self.anti_spam[timername] = usernames
+            self.leaveTimer(bot, query.message.chat_id, username, timername)
 
     def abort(self, bot, update, args, chat_data):
         timername = self.getTimerName(args)
@@ -315,50 +323,19 @@ class TimerBot:
 
     def metoo(self, bot, update, args):
         timername = self.getTimerName(args)
-    
         if self.checkTimer(bot, update, timername):
             return
     
         username = self.createUser(update)
-    
-        if not username in self.user_data[timername]:
-            usernames = self.user_data[timername]
-            usernames.append(username)
-            self.user_data[timername] = usernames
-            if username in self.anti_spam[timername]:
-                usernames = self.anti_spam[timername]
-                usernames.remove(username)
-                self.anti_spam[timername] = usernames
-            bot.send_message(chat_id=update.message.chat_id, text='"{}": {} geht mit'.format(timername, username))
-        else:
-            bot.send_message(chat_id=update.message.chat_id, text='Wie oft willst noch mitgehen?')
+        self.joinTimer(bot, update.message.chat_id, username, timername)
 
     def menot(self, bot, update, args):
         timername = self.getTimerName(args)
-    
         if self.checkTimer(bot, update, timername):
             return
     
         username = self.createUser(update)
-
-        usernames = self.user_data[timername]
-        if username in usernames:
-            usernames.remove(username)
-            self.user_data[timername] = usernames
-
-            usernames = self.anti_spam[timername]
-            usernames.append(username)
-            self.anti_spam[timername] = usernames
-
-            bot.send_message(chat_id=update.message.chat_id, text='"{}": {} geht doch net mit'.format(timername, username))
-        else:
-            if not username in self.anti_spam[timername]:
-                usernames = self.anti_spam[timername]
-                usernames.append(username)
-                self.anti_spam[timername] = usernames
-                bot.send_message(chat_id=update.message.chat_id, text='"{}": {} geht net mit'.format(timername, username))
-            else:
-                bot.send_message(chat_id=update.message.chat_id, text='Du gehst eh net mit....')
+        self.leaveTimer(bot, update.message.chat_id, username, timername)
 
     def list(self, bot, update, args):
         try:
