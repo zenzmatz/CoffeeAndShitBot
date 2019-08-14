@@ -8,611 +8,496 @@ import telegram
 import logging
 import datetime
 import re
+import AdvancedHTMLParser
+import requests
+import json
+import random
+from decimal import Decimal, ROUND_HALF_UP
 
-# Enable logging
+#enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
-global user_data
-user_data = {}
+#define class
+class TimerBot:
+    def __init__(self, token):
+        self.token = token
+        self.user_data = {}
+        self.hilfs_dic = {}
+        self.half_dic = {}
+        self.time_dic = {}
+        self.creator = {}
+        self.anti_spam = {}
+        self.black_list = {}
+        
+    def main(self):
+        """Run bot."""
+        updater = Updater(self.token) #for telegram v11.0 and v13.0
+#        updater = Updater(self.token, use_context=True) # for telegram v12.0
+        self.users = []
+       
+        dp = updater.dispatcher
+    
+        dp.add_handler(CommandHandler("start", self.start))
+        dp.add_handler(CommandHandler("covfefe", self.covfefe, pass_args=True, pass_job_queue=True, pass_chat_data=True))
+        dp.add_handler(CommandHandler("abort", self.abort, pass_args=True, pass_chat_data=True))
+        dp.add_handler(CommandHandler("abortion", self.abortion, pass_chat_data=True))
+        dp.add_handler(CommandHandler("metoo", self.metoo, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("menot", self.menot, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("list", self.list, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("nukular", self.nukular, pass_args=False, pass_chat_data=False))
+        dp.add_handler(CommandHandler("kevin", self.kevin, pass_args=False, pass_chat_data=False))
+        dp.add_handler(CommandHandler("attacke", self.attacke, pass_args=True, pass_chat_data=True))
+        dp.add_handler(CommandHandler("block", self.block, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("deblock", self.deblock, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("blocklist", self.blocklist, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("wetter", self.weather, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("mordor", self.mordor, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("cm", self.cm, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CallbackQueryHandler(self.button))
 
-global hilfs_dic
-hilfs_dic = {}
+        dp.add_error_handler(self.error)
 
-global half_dic
-half_dic = {}
+        updater.start_polling()
+        updater.idle()
 
-global time_dic
-time_dic = {}
-
-global creator
-creator = {}
-
-global anti_spam
-anti_spam = {}
-
-global black_list
-black_list = {}
-
-global menu_dummy
-menu_dummy = ""
-
-global kb_remove
-kb_remove = telegram.ReplyKeyboardRemove(False)
-
-def start(bot, update):
-    update.message.reply_text('Hi! Use /covfefe <minutes> <timername> to set a timer \nUse /abort <timer> to kill a timer \nUse /metoo <timer> to join a timer \nUse /menot <timer> to leave a timer \n Use /list <timer> to list all active timer (or all members of timer) ')
-
-def alarm(bot, job):
-    userlist = ""
-    global hilfs_dic
-    for key,val in hilfs_dic.iteritems():
-        if val == job:
-            utimername = key
-    global user_data
-    for u in user_data[utimername]:
-        userlist = userlist + "@" + str(u) + " "
-    bot.send_message(job.context, text='{} auf gehts: \n {}'.format(utimername,userlist))
-    del hilfs_dic[utimername]
-    global time_dic
-    del time_dic[utimername]
-    del anti_spam[utimername]
-
-def halftime(bot, job):
-    userlist = ""
-    global half_dic
-    for key,val in half_dic.iteritems():
-        if val == job:
-            utimername = key
-    timername = utimername[9:]
-    global user_data
-    for u in user_data[timername]:
-        userlist = userlist + "@" + str(u) + " "
-    bot.send_message(job.context, text='Noch 5 Minuten bis {} !! \n {}'.format(timername,userlist))
-    del half_dic[utimername]
-
-def covfefe(bot, update, args, job_queue, chat_data):
-    global kb_remove
-    chat_id = update.message.chat_id
-    user = update.message.from_user
-    mini = datetime.datetime.combine(datetime.date.today(), datetime.time(6, 0, 0))
-    maxi = datetime.datetime.combine(datetime.date.today(), datetime.time(19, 0, 0))
-
-    try:
-        timername = str(args[1])
-        namecheck = re.compile('[a-zA-Z0-9_]+')
-        if not namecheck.match(timername):
-            bot.send_message(chat_id=update.message.chat_id, text='Gib dem Timer bitte an richtigen Namen...!!!!')
-            return
-    except (IndexError, ValueError):
-        timername = 'covfefe'
-    global hilfs_dic
-    global time_dic
-    if timername in hilfs_dic:
-        bot.send_message(chat_id=update.message.chat_id, text='Den Timer gibts schon du Depp!!!!')
-    else:
-        if timername in chat_data:
-            job = chat_data[timername]
-            job.schedule_removal()
-            del chat_data[timername]
-        try:
-            if ":" in str(args[0]): #check if specific time not minutes
-                rawinput = str(args[0])
-                rawhour = int(rawinput.split(":")[0])
-                rawmin = int(rawinput.split(":")[1])
-                if rawhour > 6 and rawhour < 19 and rawmin >= 0 and rawmin < 60:
-                    endtime = datetime.datetime.combine(datetime.date.today(), datetime.time(rawhour, rawmin, 0))
-                    time_dic[timername] = endtime
-                    difftime = endtime - datetime.datetime.now()
-                    due = int(difftime.total_seconds() / 60)
-                    if due < 0 or due == 0:
-                        bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Uhrzeit ein')
-                        return
-                else:
-                    bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Uhrzeit ein')
-                    return
-            else:
-                due = int(args[0])
-                if due < 0 or due == 0:
-                    bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Minuten ein')
-                    return
-                else:
-                    deltatime = datetime.datetime.now() + datetime.timedelta(minutes=due)
-                    time_dic[timername] = deltatime
-                    if deltatime < mini or deltatime > maxi:
-                        bot.send_message(chat_id=update.message.chat_id, text='Computer says no...')
-                        return
-
-            if due > 5:
-                halftimename = 'halftime_' + timername
-                job = job_queue.run_once(halftime, (due-5)*60, context=chat_id)
-                chat_data[halftimename] = job
-                half_dic[halftimename] = job
-
-            job = job_queue.run_once(alarm, due*60, context=chat_id)
-            chat_data[timername] = job
-
-            hilfs_dic[timername] = job
-
-            user = update.message.from_user
-            if user['username'] == 'None' or user['username'] is None:
-                username = user['first_name']
-            else:
-                username = user['username']
-
-            global user_data
-            usernames = [username]
-            user_data[timername] = usernames
-
-            global creator
-            creator[timername] = username
-            bot.send_message(job.context, text='{} hat {} Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,time_dic[timername].strftime("%H:%M:%S"),due))
-
-        except (IndexError, ValueError):
-            bot.send_message(chat_id=update.message.chat_id, text='Usage: /covfefe <minutes> <timername>')
-
-def covfefe_test(bot, update, args, job_queue, chat_data):
-    global kb_remove
-    chat_id = update.message.chat_id
-    user = update.message.from_user
-    mini = datetime.datetime.combine(datetime.date.today(), datetime.time(6, 0, 0))
-    maxi = datetime.datetime.combine(datetime.date.today(), datetime.time(19, 0, 0))
-
-    try:
-        timername = str(args[1])
-        namecheck = re.compile('[a-zA-Z0-9_]+')
-        if not namecheck.match(timername):
-            bot.send_message(chat_id=update.message.chat_id, text='Gib dem Timer bitte an richtigen Namen...!!!!')
-            return
-    except (IndexError, ValueError):
-        timername = 'covfefe'
-    global hilfs_dic
-    global time_dic
-    if timername in hilfs_dic:
-        bot.send_message(chat_id=update.message.chat_id, text='Den Timer gibts schon du Depp!!!!')
-    else:
-        if timername in chat_data:
-            job = chat_data[timername]
-            job.schedule_removal()
-            del chat_data[timername]
-        try:
-            if ":" in str(args[0]): #check if specific time not minutes
-                rawinput = str(args[0])
-                rawhour = int(rawinput.split(":")[0])
-                rawmin = int(rawinput.split(":")[1])
-                if rawhour > 6 and rawhour < 19 and rawmin >= 0 and rawmin < 60:
-                    endtime = datetime.datetime.combine(datetime.date.today(), datetime.time(rawhour, rawmin, 0))
-                    time_dic[timername] = endtime
-                    difftime = endtime - datetime.datetime.now()
-                    due = int(difftime.total_seconds() / 60)
-                    if due < 0 or due == 0:
-                        bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Uhrzeit ein')
-                        return
-                else:
-                    bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Uhrzeit ein')
-                    return
-            else:
-                due = int(args[0])
-                if due < 0 or due == 0:
-                    bot.send_message(chat_id=update.message.chat_id, text='Gib was gscheides für die Minuten ein')
-                    return
-                else:
-                    deltatime = datetime.datetime.now() + datetime.timedelta(minutes=due)
-                    time_dic[timername] = deltatime
-                    if deltatime < mini or deltatime > maxi:
-                        bot.send_message(chat_id=update.message.chat_id, text='Computer says no...')
-                        return
-            if due > 5:
-                halftimename = 'halftime_' + timername
-                job = job_queue.run_once(halftime, (due-5)*60, context=chat_id)
-                chat_data[halftimename] = job
-                half_dic[halftimename] = job
-
-            job = job_queue.run_once(alarm, due*60, context=chat_id)
-            chat_data[timername] = job
-
-            hilfs_dic[timername] = job
-
-            user = update.message.from_user
-            if user['username'] == 'None' or user['username'] is None:
-                username = user['first_name']
-            else:
-                username = user['username']
-
-            global user_data
-            usernames = [username]
-            user_data[timername] = usernames
-
-            global creator
-            creator[timername] = username
-            keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
-	                InlineKeyboardButton("menot", callback_data=timername+":0")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            update.message.reply_text('{} hat {} Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
-
-        except (IndexError, ValueError):
-            bot.send_message(chat_id=update.message.chat_id, text='Usage: /covfefe <minutes> <timername>')
-
-def button(bot, update):
-    query = update.callback_query
-    timername = query.data.split(":")[0]
-    yes = query.data.split(":")[1]
-    user = update.callback_query.from_user
-
-    if not bool(hilfs_dic):
-        bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
-        return
-    elif timername not in hilfs_dic:
-        bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(args[0]))
-        return
-
-    if user['username'] == 'None' or user['username'] is None:
-        username = user['first_name']
-    else:
-        username = user['username']
-
-    if yes == "1":
-        global user_data
-        if not username in user_data[timername]:
-            usernames = user_data[timername]
-            usernames.append(username)
-            user_data[timername] = usernames
-            bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht mit'.format(timername, username))
+#   sub functions, used in main functions:
+    def createTimer(self, bot, job, messageText, halfTime = False):
+        userlist = ""
+        for key,val in self.hilfs_dic.iteritems():
+            if val == job:
+                utimername = key
+        for u in self.user_data[utimername]:
+            userlist = userlist + "@" + str(u) + " "
+        timername = utimername[9:] if halfTime else utimername
+        bot.send_message(job.context, text=messageText.format(timername,userlist))
+        if halfTime:
+            del self.half_dic[utimername]
         else:
-            pass
-#            bot.send_message(chat_id=query.message.chat_id, text='Wie oft willst noch mitgehen?')
-    else:
-        usernames = user_data[timername]
+            del self.hilfs_dic[utimername]
+            del self.time_dic[utimername]
+
+    def createTimerName(self, bot, update, args):
+        try:
+            timername = str(args[1:]).strip('[]').replace('u\'','').replace('\'','').replace(',','')
+            if timername == "":
+                raise ValueError
+        except (IndexError, ValueError):
+            timername = 'covfefe'
+        if timername in self.hilfs_dic:
+            bot.send_message(chat_id=update.message.chat_id, text='Den Timer "{}" gibts schon!!!!'.format(timername))
+            return
+        return timername
+
+    def getTimerName(self, args):
+        try:
+            timername = str(args[0:]).strip('[]').replace('u\'','').replace('\'','').replace(',','')
+            if timername == "":
+                raise ValueError
+        except (IndexError, ValueError):
+            if len(self.hilfs_dic) == 1:
+                timername = next(iter(self.hilfs_dic))
+            else:
+                timername = 'covfefe'
+        return timername
+    
+    def checkTimer(self, bot, update, timername):
+        if not bool(self.hilfs_dic):
+            bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
+            return True
+        elif timername not in self.hilfs_dic:
+            bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" gibts net.....'.format(timername))
+            return True
+        else:
+            return False
+
+    def createUser(self, update):
+        user = update.message.from_user
+        if user['username'] == 'None' or user['username'] is None:
+            username = user['first_name']
+        else:
+            username = user['username']
+        return username
+        
+    def cleanupEarly(self, timername, chat_data):
+        halftimename = 'halftime_' + timername
+        if halftimename in chat_data:
+            job = chat_data[halftimename]
+            job.schedule_removal()
+            del chat_data[halftimename]
+            del self.half_dic[halftimename]
+    
+        job = chat_data[timername]
+        job.schedule_removal()
+        del chat_data[timername]
+        del self.hilfs_dic[timername]
+        del self.time_dic[timername]
+        if timername in self.anti_spam:
+            del self.anti_spam[timername]
+
+    def alarm(self, bot, job):
+        messageText = '"{}" auf gehts: \n {}'
+        self.createTimer(bot, job, messageText)
+
+    def halftime(self, bot, job):
+        messageText = 'Noch 5 Minuten bis "{}" !! \n {}'
+        self.createTimer(bot, job, messageText, True)
+
+    def joinTimer(self, bot, chatId, username, timername):
+        if not username in self.user_data[timername]:
+            usernames = self.user_data[timername]
+            usernames.append(username)
+            self.user_data[timername] = usernames
+            try:
+                if username in self.anti_spam[timername]:
+                    usernames = self.anti_spam[timername]
+                    usernames.remove(username)
+            except (KeyError):
+                usernames = []
+            self.anti_spam[timername] = usernames
+            bot.send_message(chat_id=chatId, text='"{}": {} geht mit'.format(timername, username))
+        else:
+            bot.send_message(chat_id=chatId, text='Wie oft willst noch mitgehen?')
+    
+    def leaveTimer(self, bot, chatId, username, timername):
+        usernames = self.user_data[timername]
         if username in usernames:
             usernames.remove(username)
-            user_data[timername] = usernames
-            bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht doch net mit'.format(timername, username))
+            self.user_data[timername] = usernames
+
+            try:
+                usernames = self.anti_spam[timername]
+            except (KeyError):
+                usernames = []
+            usernames.append(username)
+            self.anti_spam[timername] = usernames
+
+            bot.send_message(chat_id=chatId, text='"{}": {} geht doch net mit'.format(timername, username))
         else:
-            global anti_spam
-            if timername in anti_spam:
-                if not username in anti_spam[timername]:
-                    bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht nicht mit'.format(timername, username))
-                    usernames = anti_spam[timername]
-                    usernames.append(username)
-                    anti_spam[timername] = usernames
-                else:
-                    pass
-            else:
-                bot.send_message(chat_id=query.message.chat_id, text='{}: {} geht nicht mit'.format(timername, username))
-                usernames = anti_spam[timername]
+            if not username in self.anti_spam[timername]:
+                usernames = self.anti_spam[timername]
                 usernames.append(username)
-                anti_spam[timername] = usernames
-
-def abort(bot, update, args, chat_data):
-    global kb_remove
-    try:
-        timername = str(args[0])
-    except (IndexError, ValueError):
-        if len(hilfs_dic) == 1:
-            timername = next(iter(hilfs_dic))
-        else:
-            timername = 'covfefe'
-
-    if not bool(hilfs_dic):
-        bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
-        return
-    elif timername not in hilfs_dic:
-        bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(args[0]))
-        return
-
-    user = update.message.from_user
-    if user['username'] == 'None' or user['username'] is None:
-        username = user['first_name']
-    else:
-        username = user['username']
-    global creator
-    if not username == creator[timername]:
-        bot.send_message(chat_id=update.message.chat_id, text='Timer {} darf nur von {} aborted werden.....'.format(timername,creator[timername]))
-        return
-
-    halftimename = 'halftime_' + timername
-    if halftimename in chat_data:
-        job = chat_data[halftimename]
-        job.schedule_removal()
-        del chat_data[halftimename]
-        del half_dic[halftimename]
-
-    job = chat_data[timername]
-    job.schedule_removal()
-    del chat_data[timername]
-    del hilfs_dic[timername]
-    global time_dic
-    del time_dic[timername]
-    if timername in anti_spam:
-        del anti_spam[timername]
-
-    bot.send_message(chat_id=update.message.chat_id, text='{} abgebrochen!'.format(timername))
-
-def attacke(bot, update, args, chat_data):
-    global kb_remove
-    try:
-        timername = str(args[0])
-    except (IndexError, ValueError):
-        if len(hilfs_dic) == 1:
-            timername = next(iter(hilfs_dic))
-        else:
-            timername = 'covfefe'
-
-    if not bool(hilfs_dic):
-        bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
-        return
-    elif timername not in hilfs_dic:
-        bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(timername))
-        return
-
-    user = update.message.from_user
-    if user['username'] == 'None' or user['username'] is None:
-        username = user['first_name']
-    else:
-        username = user['username']
-    global creator
-    if not username == creator[timername]:
-        bot.send_message(chat_id=update.message.chat_id, text='Timer {} darf nur von {} attackiert werden.....'.format(timername,creator[timername]))
-        return
-
-    userlist = ""
-    global user_data
-    for u in user_data[timername]:
-        userlist = userlist + "@" + str(u) + " "
-    bot.send_message(chat_id=update.message.chat_id, text='{} wurde attackiert, auf gehts \n {}'.format(timername,userlist))
-
-    halftimename = 'halftime_' + timername
-    if halftimename in chat_data:
-        job = chat_data[halftimename]
-        job.schedule_removal()
-        del chat_data[halftimename]
-        del half_dic[halftimename]
-
-    job = chat_data[timername]
-    job.schedule_removal()
-    del chat_data[timername]
-    del hilfs_dic[timername]
-    global time_dic
-    del time_dic[timername]
-    if timername in anti_spam:
-        del anti_spam[timername]
-
-def abortion(bot, update, chat_data):
-    global kb_remove
-    user = update.message.from_user
-    if user['username'] == 'None' or user['username'] is None:
-        username = user['first_name']
-    else:
-        username = user['username']
-
-    global black_list
-    if not username in black_list:
-        if not bool(chat_data):
-            bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
-            return
-
-        for timername in chat_data:
-            job = chat_data[timername]
-            job.schedule_removal()
-
-            halftimename = 'halftime_' + timername
-            if halftimename in chat_data:
-                job = chat_data[halftimename]
-                job.schedule_removal()
-        chat_data.clear()
-        hilfs_dic.clear()
-        half_dic.clear()
-        global time_dic
-        time_dic.clear()
-        anti_spam.clear()
-
-        bot.send_message(chat_id=update.message.chat_id, text='Alle Timer abgebrochen!')
-    else:
-        bot.send_message(chat_id=update.message.chat_id, text='Kein Timer abgebrochen!')
-
-def metoo(bot, update, args, chat_data):
-    global kb_remove
-    try:
-        timername = str(args[0])
-    except (IndexError, ValueError):
-        if len(hilfs_dic) == 1:
-            timername = next(iter(hilfs_dic))
-        else:
-            timername = 'covfefe'
-
-    if not bool(hilfs_dic):
-        bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
-        return
-    elif timername not in hilfs_dic:
-        bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(args[0]))
-        return
-
-    user = update.message.from_user
-    if user['username'] == 'None' or user['username'] is None:
-        username = user['first_name']
-    else:
-        username = user['username']
-
-    global user_data
-    if not username in user_data[timername]:
-        usernames = user_data[timername]
-        usernames.append(username)
-        user_data[timername] = usernames
-        bot.send_message(chat_id=update.message.chat_id, text='{}: {} geht mit'.format(timername, username))
-    else:
-        bot.send_message(chat_id=update.message.chat_id, text='Wie oft willst noch mitgehen?')
-
-def block(bot, update, args, chat_data):
-    global kb_remove
-    username = str(args[0])
-
-    global black_list
-    black_list[username] = username
-    bot.send_message(chat_id=update.message.chat_id, text='{} wurde geblockt'.format(username))
-
-def deblock(bot, update, args, chat_data):
-    global kb_remove
-    username = str(args[0])
-
-    global black_list
-    if username in black_list:
-        del black_list[username]
-
-def menot(bot, update, args, chat_data):
-    global kb_remove
-    try:
-        timername = str(args[0])
-    except (IndexError, ValueError):
-        if len(hilfs_dic) == 1:
-            timername = next(iter(hilfs_dic))
-        else:
-            timername = 'covfefe'
-
-    if not bool(hilfs_dic):
-        bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
-        return
-    elif timername not in hilfs_dic:
-        bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(args[0]))
-        return
-
-    user = update.message.from_user
-    if user['username'] == 'None' or user['username'] is None:
-        username = user['first_name']
-    else:
-        username = user['username']
-
-    global user_data
-    usernames = user_data[timername]
-    if username in usernames:
-        usernames.remove(username)
-        user_data[timername] = usernames
-        bot.send_message(chat_id=update.message.chat_id, text='{}: {} geht doch net mit'.format(timername, username))
-    else:
-        bot.send_message(chat_id=update.message.chat_id, text='Du depp gehst eh net mit....')
-
-def error(bot, update, error):
-    logger.warning('Update "%s" caused error "%s"', update, error)
-
-
-def list(bot, update, args, chat_data):
-    global kb_remove
-    try:
-        userlist = ""
-        timername = ""
-        try:
-            timername = str(args[0])
-        except (IndexError, ValueError):
-            if len(hilfs_dic) == 1:
-                timername = next(iter(hilfs_dic))
-            elif len(hilfs_dic) == 0:
-                bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden...')
-                return
+                self.anti_spam[timername] = usernames
+                bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
             else:
-                timerlist = ""
-                for key in hilfs_dic:
-                    timerlist = timerlist + str(key) + " "
-                bot.send_message(chat_id=update.message.chat_id, text='Timer: {}'.format(timerlist))
+                bot.send_message(chat_id=chatId, text='Du gehst eh net mit....')
+
+#   main functions, called by main
+    def start(self, bot, update):
+        update.message.reply_text('Hi! Use /covfefe <minutes> <timername> to set a timer \nUse /abort <timer> to kill a timer \nUse /metoo <timer> to join a timer \nUse /menot <timer> to leave a timer \n Use /list <timer> to list all active timer (or all members of timer) ')
+
+    def covfefe(self, bot, update, args, job_queue, chat_data):
+        chat_id = update.message.chat_id
+        user = update.message.from_user
+    
+        timername = self.createTimerName(bot, update, args)
+        if timername is None:
+            return
+        else:
+            if timername in chat_data:
+                job = chat_data[timername]
+                job.schedule_removal()
+                del chat_data[timername]
+            try:
+                if ":" in str(args[0]): #check if specific time not minutes
+                    rawinput = str(args[0])
+                    rawhour = int(rawinput.split(":")[0])
+                    rawmin = int(rawinput.split(":")[1])
+                    if rawhour > 0 and rawhour < 24 and rawmin >= 0 and rawmin < 60:
+                        endtime = datetime.datetime.combine(datetime.date.today(), datetime.time(rawhour, rawmin, 0))
+                        self.time_dic[timername] = endtime
+                        difftime = endtime - datetime.datetime.now()
+                        due = int(difftime.total_seconds() / 60)
+                        if due < 0 or due == 0:
+                            bot.send_message(chat_id=update.message.chat_id, text='A bissl mehr Zeit muast den anderen schon lassen')
+                            return
+                    else:
+                        bot.send_message(chat_id=update.message.chat_id, text='Was gscheides für die Uhrzeit solltest schon angeben')
+                        return
+                else:
+                    due = int(args[0])
+                    if due < 0 or due == 0:
+                        bot.send_message(chat_id=update.message.chat_id, text='A bissl mehr Zeit muast den anderen schon lassen')
+                        return
+                    else:
+                        deltatime = datetime.datetime.now() + datetime.timedelta(minutes=due)
+                        self.time_dic[timername] = deltatime
+                if due > 5:
+                    halftimename = 'halftime_' + timername
+                    job = job_queue.run_once(self.halftime, (due-5)*60, context=chat_id)
+                    chat_data[halftimename] = job
+                    self.half_dic[halftimename] = job
+    
+                job = job_queue.run_once(self.alarm, due*60, context=chat_id)
+                chat_data[timername] = job
+    
+                self.hilfs_dic[timername] = job
+                
+                username = self.createUser(update)
+                usernames = [username]
+                self.user_data[timername] = usernames
+    
+                self.creator[timername] = username
+
+                keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
+                             InlineKeyboardButton("menot", callback_data=timername+":0")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                update.message.reply_text('{} hat "{}" Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,self.time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
+    
+            except (IndexError, ValueError):
+                bot.send_message(chat_id=update.message.chat_id, text='Usage: /covfefe <minutes> <timername>')
+
+    def button(self, bot, update):
+        query = update.callback_query
+        timername = query.data.split(":")[0]
+        yes = query.data.split(":")[1]
+        user = update.callback_query.from_user
+
+        if self.checkTimer(bot, update, timername):
+            return
+    
+        if user['username'] == 'None' or user['username'] is None:
+            username = user['first_name']
+        else:
+            username = user['username']
+
+        if yes == "1":
+            self.joinTimer(bot, query.message.chat_id, username, timername)
+        else:
+            self.leaveTimer(bot, query.message.chat_id, username, timername)
+
+    def abort(self, bot, update, args, chat_data):
+        timername = self.getTimerName(args)
+        if self.checkTimer(bot, update, timername):
+            return
+    
+        username = self.createUser(update)
+        
+        if not username == self.creator[timername]:
+            bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" darf nur von {} aborted werden.....'.format(timername,self.creator[timername]))
+            return
+    
+        self.cleanupEarly(timername, chat_data)
+
+        bot.send_message(chat_id=update.message.chat_id, text='"{}" abgebrochen!'.format(timername))
+
+    def attacke(self, bot, update, args, chat_data):
+        timername = self.getTimerName(args)
+        if self.checkTimer(bot, update, timername):
+            return
+    
+        username = self.createUser(update)
+        
+        if not username == self.creator[timername]:
+            bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" darf nur von {} attackiert werden.....'.format(timername,self.creator[timername]))
+            return
+    
+        userlist = ""
+        for u in self.user_data[timername]:
+            userlist = userlist + "@" + str(u) + " "
+        bot.send_message(chat_id=update.message.chat_id, text='"{}" wurde attackiert, auf gehts \n {}'.format(timername,userlist))
+    
+        self.cleanupEarly(timername, chat_data)
+    
+    def abortion(self, bot, update, chat_data):
+        username = self.createUser(update)
+        if not username in self.black_list:
+            if not bool(chat_data):
+                bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden....')
+                return
+    
+            for timername in chat_data:
+                job = chat_data[timername]
+                job.schedule_removal()
+    
+                halftimename = 'halftime_' + timername
+                if halftimename in chat_data:
+                    job = chat_data[halftimename]
+                    job.schedule_removal()
+            chat_data.clear()
+            self.hilfs_dic.clear()
+            self.half_dic.clear()
+            self.time_dic.clear()
+            self.anti_spam.clear()
+    
+            bot.send_message(chat_id=update.message.chat_id, text='Alle Timer abgebrochen!')
+        else:
+            bot.send_message(chat_id=update.message.chat_id, text='Kein Timer abgebrochen!')
+
+    def metoo(self, bot, update, args):
+        timername = self.getTimerName(args)
+        if self.checkTimer(bot, update, timername):
+            return
+    
+        username = self.createUser(update)
+        self.joinTimer(bot, update.message.chat_id, username, timername)
+
+    def menot(self, bot, update, args):
+        timername = self.getTimerName(args)
+        if self.checkTimer(bot, update, timername):
+            return
+    
+        username = self.createUser(update)
+        self.leaveTimer(bot, update.message.chat_id, username, timername)
+
+    def list(self, bot, update, args):
+        try:
+            userlist = ""
+            timername = ""
+            try:
+                timername = str(args[0:]).strip('[]').replace('u\'','').replace('\'','').replace(',','')
+                if timername == "":
+                    raise ValueError
+            except (IndexError, ValueError):
+                if len(self.hilfs_dic) == 1:
+                    timername = next(iter(self.hilfs_dic))
+                elif len(self.hilfs_dic) == 0:
+                    bot.send_message(chat_id=update.message.chat_id, text='Keine Timer gefunden...')
+                    return
+                else:
+                    timerlist = ""
+                    for key in self.hilfs_dic:
+                        timerlist = timerlist + str(key) + " "
+                    bot.send_message(chat_id=update.message.chat_id, text='Timer: {}'.format(timerlist))
+                    return
+    
+            if timername not in self.hilfs_dic:
+                bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" gibts net.....'.format(timername))
+                return
+            for u in self.user_data[timername]:
+                userlist = userlist + str(u) + " "
+            difftime = self.time_dic[timername] - datetime.datetime.now()
+            timeto = int(difftime.total_seconds() / 60)
+            bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist))
+        except (IndexError, ValueError):
+            timerlist = ""
+            for key in self.hilfs_dic:
+                timerlist = timerlist + str(key) + " "
+            bot.send_message(chat_id=update.message.chat_id, text='Timer: {}'.format(timerlist))
+
+    def block(self, bot, update, args):
+        username = str(args[0])
+    
+        self.black_list[username] = username
+        bot.send_message(chat_id=update.message.chat_id, text='{} darf nicht mehr abtreiben'.format(username))
+    
+    def deblock(self, bot, update, args):
+        username = str(args[0])
+
+        if username in self.black_list:
+            del self.black_list[username]
+            bot.send_message(chat_id=update.message.chat_id, text='{} darf wieder abtreiben'.format(username))
+
+    def blocklist(self, bot, update):
+        try:
+            blocked_names = str(self.black_list).strip('[]').replace('\'','')
+        except (IndexError, ValueError):
+            if len(self.black_list) == 0:
+                bot.send_message(chat_id=update.message.chat_id, text='Es gibt keine Abtreibungsverbot')
+                return
+        bot.send_message(chat_id=update.message.chat_id, text='Abtreibungsverbot für: {}'.format(blocked_names))
+
+    def weather(self, bot, update, args):
+        try:
+            days = int(args[1])
+        except (IndexError, ValueError):
+            days = 1
+
+        try:
+            location = str(args[0])
+        except (IndexError, ValueError):
+            bot.send_message(chat_id=update.message.chat_id, text='An Ort musst schon angeben....')
+            return
+
+        page = requests.get('https://www.bergfex.at/sommer/' + location + '/wetter/prognose')
+        parser = AdvancedHTMLParser.AdvancedHTMLParser()
+        parser.parseStr(page.content)
+    
+        masterkeys = []
+        for i in range(0,days):
+            masterkeys.append("forecast-day-" + str(i))
+
+        masterdic = dict.fromkeys(masterkeys, {})
+
+        datakeys = ['tmax','tmin','rrp','rrr','sonne','sgrenze','wgew']
+
+        dataReplaceKeys = {'tmax':      'Max. Temperatur',
+                           'tmin':      'Min. Temperatur',
+                           'rrp':       'Regenwahrscheinlichkeit',
+                           'rrr':       'Regenmenge in Liter',
+                           'sonne':     'Sonnenstunden',
+                           'sgrenze':   'Schneefallgrenze',
+                           'wgew':      'Gewitterwahrscheinlichkeit'}
+
+        datadic = dict.fromkeys(datakeys, "-")
+
+        messageOutput = ""
+        for m in sorted(masterdic.keys()):
+            if m == "forecast-day-0":
+                mFormated = "Heute:"
+            elif m == "forecast-day-1":
+                mFormated = "\nMorgen:"
+            else:
+                mFormated = "\nIn " + m.strip('forecast-day-') + " Tagen :"
+            messageOutput = messageOutput + mFormated + "\n"
+
+            day = parser.getElementById(m)
+
+            if day is None:
+                bot.send_message(chat_id=update.message.chat_id, text='Keine Daten für: {} für die nächsten {} Tage'.format(location,str(days)))
                 return
 
-        if timername not in hilfs_dic:
-            bot.send_message(chat_id=update.message.chat_id, text='Timer {} gibts net.....'.format(timername))
-            return
-        global user_data
-        for u in user_data[timername]:
-            userlist = userlist + str(u) + " "
-        global time_dic
-        difftime = time_dic[timername] - datetime.datetime.now()
-        timeto = int(difftime.total_seconds() / 60)
-        bot.send_message(chat_id=update.message.chat_id, text='{} um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,time_dic[timername].strftime("%H:%M:%S"),timeto,userlist))        
-    except (IndexError, ValueError):
-        timerlist = ""
-        for key in hilfs_dic:
-            timerlist = timerlist + str(key) + " "
-        bot.send_message(chat_id=update.message.chat_id, text='Timer: {}'.format(timerlist))
+            for k in datadic:
+                datadic[k] = day.getElementsByClassName(k)[0].innerHTML.strip()
+                messageOutput = messageOutput + dataReplaceKeys[k] + ": " + datadic[k] + "\n"
 
-def nukular(bot, update, args, chat_data):
-    global kb_remove
-    bot.send_photo(chat_id=update.message.chat_id, photo=open('/home/zenzmatz/Telegram_Bot/nucular_simpsons.jpg', 'rb'))
+        bot.send_message(chat_id=update.message.chat_id, text='Wetterinfo: \n{}'.format(messageOutput.encode("utf-8")))
 
-def kevin(bot, update, args, chat_data):
-    global kb_remove
-    bot.send_document(chat_id=update.message.chat_id, document=open('/home/zenzmatz/Telegram_Bot/nein.gif', 'rb'))
+    def cm(self, bot, update, args):
+        try:
+            celcius = float(args[0])
+            mordor = Decimal((celcius-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
+            bot.send_message(chat_id=update.message.chat_id, text="*%s°C* san *%s°M*" %(celcius, mordor))
+        except:
+            bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. kann i net umrechnen. vielleicht muast wos gscheits angeben")
 
-def cm(bot, update, args, chat_data):
-    from decimal import Decimal, ROUND_HALF_UP
-    try:
-        celcius = float(args[0])
-        mordor = Decimal((celcius-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
-        bot.send_message(chat_id=update.message.chat_id, text="*%s°C* san *%s°M*" %(celcius, mordor), parse_mode="Markdown")
-    except:
-        bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. kann i net umrechnen. vielleicht muast wos gscheits angeben")
+    def mordor(self, bot, update, args):
 
-def mordor(bot, update, args, chat_data):
-  import requests
-  import json
-  import random
-  from decimal import Decimal, ROUND_HALF_UP
+        texts = [
+              "wir ham {}°M* in {}",
+              "Michse denken wir {}°M haben in {}",
+              "Meine innere Stimme sagt mir wir haben {}°M in {}",
+              "Ein Ring sie zu knechten, ins Dunkel zu treibn...Aso, nur die Temperatur. Alsdann: {}°M in {}"
+        ]
 
-  texts = [
-      "wir ham *%s°M* in *%s*",
-      "Michse denken wir *%s°M* haben in *%s*",
-      "Meine innere Stimme sagt mir wir haben *%s°M* in *%s*",
-      "Ein Ring sie zu knechten, ins Dunkel zu treibn...Aso, nur die Temperatur. Alsdann: *%s°M* in *%s*"
-  ]
+        text = random.choice(texts)
 
-  text = random.choice(texts)
+        name = ""
+        for arg in args:
+            name += arg
+            name += " "
 
-  name = ""
-  for arg in args:
-      name += arg
-      name += " "
+        try:
+            response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % name)
+            data = response.json()
+            temp=data["main"]["temp"]
+            mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
+            tmp_str = text.format(mordor, data["name"])
+            bot.send_message(chat_id=update.message.chat_id, text=tmp_str)
+        except:
+            bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. hob kane wetterdaten für di\nprobiers mal mit /mordor <die ortschaft>")
 
-  try:
-    response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % name)
+    def nukular(self, bot, update):
+        bot.send_photo(chat_id=update.message.chat_id, photo=open('/home/zenzmatz/Telegram_Bot/nucular_simpsons.jpg', 'rb'))
+    
+    def kevin(self, bot, update):
+        bot.send_document(chat_id=update.message.chat_id, document=open('/home/zenzmatz/Telegram_Bot/nein.gif', 'rb'))
 
-    data = response.json()
-    temp=data["main"]["temp"]
-    mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)#round((temp-29)/2)
-    tmp_str = text % (mordor, data["name"])
-    bot.send_message(chat_id=update.message.chat_id, text=tmp_str, parse_mode="Markdown")
-  except:
-    bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. hob kane wetterdaten für di")
-    bot.send_message(chat_id=update.message.chat_id, text="probiers mal mit /mordor <die ortschaft>")
+    def error(self, bot, update, error):
+        logger.warning('Update "%s" caused error "%s"', update, error)
 
-def main():
-    """Run bot."""
-    updater = Updater("TOKEN")
+TelegramBot = TimerBot("ABCDEFGHIJLK")
 
-    global users
-    users = []
-   
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("covfefe", covfefe_test, pass_args=True, pass_job_queue=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("covfefe_test", covfefe_test, pass_args=True, pass_job_queue=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("abort", abort, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("abortion", abortion, pass_chat_data=True))
-    dp.add_handler(CommandHandler("metoo", metoo, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("menot", menot, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("list", list, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("nukular", nukular, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("kevin", kevin, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("attacke", attacke, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("block", block, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("deblock", deblock, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("mordor", mordor, pass_args=True, pass_chat_data=True))
-    dp.add_handler(CommandHandler("cm", cm, pass_args=True, pass_chat_data=True))
-
-    dp.add_handler(CallbackQueryHandler(button))
-
-    dp.add_error_handler(error)
-
-    updater.start_polling()
-
-    updater.idle()
-
-if __name__ == '__main__':
-    main()
+TelegramBot.main()
