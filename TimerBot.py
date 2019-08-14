@@ -82,6 +82,8 @@ class TimerBot:
     def createTimerName(self, bot, update, args):
         try:
             timername = str(args[1:]).strip('[]').replace('u\'','').replace('\'','').replace(',','')
+            if timername == "":
+                raise ValueError
         except (IndexError, ValueError):
             timername = 'covfefe'
         if timername in self.hilfs_dic:
@@ -148,10 +150,13 @@ class TimerBot:
             usernames = self.user_data[timername]
             usernames.append(username)
             self.user_data[timername] = usernames
-            if username in self.anti_spam[timername]:
-                usernames = self.anti_spam[timername]
-                usernames.remove(username)
-                self.anti_spam[timername] = usernames
+            try:
+                if username in self.anti_spam[timername]:
+                    usernames = self.anti_spam[timername]
+                    usernames.remove(username)
+            except (KeyError):
+                usernames = []
+            self.anti_spam[timername] = usernames
             bot.send_message(chat_id=chatId, text='"{}": {} geht mit'.format(timername, username))
         else:
             bot.send_message(chat_id=chatId, text='Wie oft willst noch mitgehen?')
