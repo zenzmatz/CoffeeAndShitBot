@@ -66,7 +66,7 @@ class TimerBot:
 #   sub functions, used in main functions:
     def createTimer(self, bot, job, messageText, halfTime = False):
         userlist = ""
-        for key,val in self.hilfs_dic.iteritems():
+        for key,val in self.half_dic.iteritems() if halfTime else self.hilfs_dic.iteritems():
             if val == job:
                 utimername = key
         for u in self.user_data[utimername]:
