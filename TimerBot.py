@@ -72,12 +72,11 @@ class TimerBot:
         for key,val in self.half_dic.items() if halfTime else self.hilfs_dic.items():
             if val == job:
                 utimername = key
-        userlist = "@" + " @".join(self.user_data[utimername])
         timername = utimername[9:] if halfTime else utimername
+        userlist = "@" + " @".join(self.user_data[timername])
         bot.send_message(job.context, text=messageText.format(timername,userlist))
         if halfTime:
             del self.half_dic[utimername]
-            del self.user_data[utimername]
         else:
             del self.hilfs_dic[utimername]
             del self.time_dic[utimername]
