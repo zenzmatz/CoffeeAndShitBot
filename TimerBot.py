@@ -69,11 +69,10 @@ class TimerBot:
 #   sub functions, used in main functions:
     def createTimer(self, bot, job, messageText, halfTime = False):
         userlist = ""
-        for key,val in self.half_dic.iteritems() if halfTime else self.hilfs_dic.iteritems():
+        for key,val in self.half_dic.items() if halfTime else self.hilfs_dic.items():
             if val == job:
                 utimername = key
-        for u in self.user_data[utimername]:
-            userlist = userlist + "@" + str(u) + " "
+        userlist = "@" + " @".join(self.user_data[utimername])
         timername = utimername[9:] if halfTime else utimername
         bot.send_message(job.context, text=messageText.format(timername,userlist))
         if halfTime:
@@ -289,8 +288,7 @@ class TimerBot:
             return
     
         userlist = ""
-        for u in self.user_data[timername]:
-            userlist = userlist + "@" + str(u) + " "
+        userlist = "@" + " @".join(self.user_data[timername])
         bot.send_message(chat_id=update.message.chat_id, text='"{}" wurde attackiert, auf gehts \n {}'.format(timername,userlist))
     
         self.cleanupEarly(timername, chat_data)
@@ -361,8 +359,7 @@ class TimerBot:
             if timername not in self.hilfs_dic:
                 bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" gibts net.....'.format(timername))
                 return
-            for u in self.user_data[timername]:
-                userlist = userlist + str(u) + " "
+            userlist = " ,".join(self.user_data[timername])
             difftime = self.time_dic[timername] - datetime.datetime.now()
             timeto = int(difftime.total_seconds() / 60)
             bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist))
