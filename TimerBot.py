@@ -31,6 +31,9 @@ class TimerBot:
         self.creator = {}
         self.anti_spam = {}
         self.black_list = {}
+
+        with open('./resources/city.list.json', 'r', encoding="utf8") as f:
+            self.city_list = json.load(f)
         
     def main(self):
         """Run bot."""
@@ -459,33 +462,63 @@ class TimerBot:
         try:
             celcius = float(args[0])
             mordor = Decimal((celcius-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
-            bot.send_message(chat_id=update.message.chat_id, text="*%s°C* san *%s°M*" %(celcius, mordor))
+            bot.send_message(chat_id=update.message.chat_id, text="%s°C san %s°M" %(celcius, mordor))
         except:
             bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. kann i net umrechnen. vielleicht muast wos gscheits angeben")
 
     def mordor(self, bot, update, args):
 
+        username = self.createUser(update)
+
         texts = [
-              "wir ham {}°M* in {}",
+              "wir ham {}°M in {}",
               "Michse denken wir {}°M haben in {}",
               "Meine innere Stimme sagt mir wir haben {}°M in {}",
-              "Ein Ring sie zu knechten, ins Dunkel zu treibn...Aso, nur die Temperatur. Alsdann: {}°M in {}"
+              "Ein Ring sie zu knechten, ins Dunkel zu treibn...Aso, nur die Temperatur. Alsdann: {}°M in {}",
+              "Was sagt es mein Schatz? {}°M in {} mein Schatz. Garstige kleine Hobbits!",
+              "Es hat gmiatliche {}°M in {}",
+              "Mr " + username + " no home. {}°M in {} No no. I need more lemon pledge",
+              "Frag mich nicht. Ich will nicht denken. Ich bin voller Schoggi. ({}°M in {})",
+              "Wir ham {}°M in {}. Hasta la vista baby!",
+              "{}°M in {}. Yippee-ki-yay, Motherfucker",
+              "This is {}°M in {}!",
+              "Enough is Enough! I've had it with this motherfucking {}°M in this motherfucking {}.",
+              "You want the truth? You can't handle the truth! {}°M in {}",
+              "Goooood morning Chat. Wir ham {}°M in {}",
+              "Life is like a box of chocolate. You'll never no how many {}°M you'll get in {}",
+              "Alright alright alright wir ham {}°M in {}"
         ]
-
-        text = random.choice(texts)
 
         name = ""
         for arg in args:
             name += arg
             name += " "
 
+        name = name.strip()
+
+        cities = []
+        # search for the city
+        for city in self.city_list:
+            if name.lower() == city["name"].lower():
+                cities.clear()
+                cities.append(city["name"])
+                break
+            if name.lower() in city["name"].lower():
+                if city["name"] not in cities:
+                    cities.append(city["name"])
+
         try:
-            response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % name)
-            data = response.json()
-            temp=data["main"]["temp"]
-            mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
-            tmp_str = text.format(mordor, data["name"])
-            bot.send_message(chat_id=update.message.chat_id, text=tmp_str)
+            if len(cities) > 5:
+                bot.send_message(chat_id=update.message.chat_id, text="bist deppert. i hob viel zviele ortschaften gfunden. anti spam maßnahmen wurden ergriffen aka i gib nix aus.")
+            else:
+                for city in cities:
+                    response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % city)
+                    data = response.json()
+                    temp=data["main"]["temp"]
+                    mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
+                    text = random.choice(texts)
+                    tmp_str = text.format(mordor, data["name"])
+                    bot.send_message(chat_id=update.message.chat_id, text=tmp_str)
         except:
             bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. hob kane wetterdaten für di\nprobiers mal mit /mordor <die ortschaft>")
 
@@ -498,6 +531,6 @@ class TimerBot:
     def error(self, bot, update, error):
         logger.warning('Update "%s" caused error "%s"', update, error)
 
-TelegramBot = TimerBot("ABCDEFGHIJLK")
+TelegramBot = TimerBot("TOKEN")
 
 TelegramBot.main()
