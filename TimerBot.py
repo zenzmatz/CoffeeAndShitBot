@@ -12,6 +12,7 @@ import AdvancedHTMLParser
 import requests
 import json
 import random
+import difflib
 from decimal import Decimal, ROUND_HALF_UP
 
 #enable logging
@@ -510,6 +511,10 @@ class TimerBot:
         try:
             if len(cities) > 5:
                 bot.send_message(chat_id=update.message.chat_id, text="bist deppert. i hob viel zviele ortschaften gfunden. anti spam maßnahmen wurden ergriffen aka i gib nix aus.")
+            elif len(cities) == 0:
+                posCities = difflib.get_close_matches(name.lower(),[c["name"].lower() for c in self.city_list],5)
+                cities = ", ".join(self.user_data[posCities])
+                bot.send_message(chat_id=update.message.chat_id, text='Manst vl an von den Ortn? {}'.format(cities))
             else:
                 for city in cities:
                     response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % city)
