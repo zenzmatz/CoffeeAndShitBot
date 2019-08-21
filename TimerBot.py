@@ -12,6 +12,8 @@ import AdvancedHTMLParser
 import requests
 import json
 import random
+import os
+import difflib
 from decimal import Decimal, ROUND_HALF_UP
 
 #enable logging
@@ -20,10 +22,13 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
+#get absolute path
+selfDir = os.path.dirname(os.path.realpath('__file__'))
+
 #define class
 class TimerBot:
-    def __init__(self, token):
-        self.token = token
+    def __init__(self, selfDir):
+        self.selfDir = selfDir
         self.user_data = {}
         self.hilfs_dic = {}
         self.half_dic = {}
@@ -32,8 +37,19 @@ class TimerBot:
         self.anti_spam = {}
         self.black_list = {}
 
-        with open('./resources/city.list.json', 'r', encoding="utf8") as f:
-            self.city_list = json.load(f)
+        self.cityListPath = os.path.join(self.selfDir, 'resources/city.list.json')
+        with open(self.cityListPath, 'r', encoding="utf8") as city_data:
+            self.city_list = json.load(city_data)
+        
+        self.configFilePath = os.path.join(self.selfDir, 'resources/config.json')
+        with open(self.configFilePath) as config_file:
+            data = json.load(config_file)
+        
+        self.token = data['telegramBotToken']
+        self.openWeatherApi = data['openWeatherApi']
+        
+        self.nukularPath = os.path.join(self.selfDir, 'resources/pictures/nucular_simpsons.jpg')
+        self.kevinPath = os.path.join(self.selfDir, 'resources/gifs/nein.gif')
         
     def main(self):
         """Run bot."""
@@ -498,9 +514,13 @@ class TimerBot:
         try:
             if len(cities) > 5:
                 bot.send_message(chat_id=update.message.chat_id, text="bist deppert. i hob viel zviele ortschaften gfunden. anti spam maßnahmen wurden ergriffen aka i gib nix aus.")
+            elif len(cities) == 0:
+                posCities = difflib.get_close_matches(name.lower(),[c["name"].lower() for c in self.city_list],5)
+                cities = ", ".join(self.user_data[posCities])
+                bot.send_message(chat_id=update.message.chat_id, text='Manst vl an von den Ortn? {}'.format(cities))
             else:
                 for city in cities:
-                    response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % city)
+                    response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=%s&units=metric" % (city,self.openWeatherApi))
                     data = response.json()
                     temp=data["main"]["temp"]
                     mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
@@ -511,14 +531,14 @@ class TimerBot:
             bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. hob kane wetterdaten für di\nprobiers mal mit /mordor <die ortschaft>")
 
     def nukular(self, bot, update):
-        bot.send_photo(chat_id=update.message.chat_id, photo=open('/home/zenzmatz/Telegram_Bot/nucular_simpsons.jpg', 'rb'))
+        bot.send_photo(chat_id=update.message.chat_id, photo=open(self.nukularPath, 'rb'))
     
     def kevin(self, bot, update):
-        bot.send_document(chat_id=update.message.chat_id, document=open('/home/zenzmatz/Telegram_Bot/nein.gif', 'rb'))
+        bot.send_document(chat_id=update.message.chat_id, document=open(self.kevinPath, 'rb'))
 
     def error(self, bot, update, error):
         logger.warning('Update "%s" caused error "%s"', update, error)
 
-TelegramBot = TimerBot("TOKEN")
+TelegramBot = TimerBot(selfDir)
 
 TelegramBot.main()
