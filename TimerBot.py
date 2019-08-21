@@ -31,6 +31,9 @@ class TimerBot:
         self.creator = {}
         self.anti_spam = {}
         self.black_list = {}
+
+        with open('./resources/city.list.json', 'r', encoding="utf8") as f:
+            self.city_list = json.load(f)
         
     def main(self):
         """Run bot."""
@@ -66,18 +69,18 @@ class TimerBot:
 #   sub functions, used in main functions:
     def createTimer(self, bot, job, messageText, halfTime = False):
         userlist = ""
-        for key,val in self.hilfs_dic.iteritems():
+        for key,val in self.half_dic.items() if halfTime else self.hilfs_dic.items():
             if val == job:
                 utimername = key
-        for u in self.user_data[utimername]:
-            userlist = userlist + "@" + str(u) + " "
         timername = utimername[9:] if halfTime else utimername
+        userlist = "@" + " @".join(self.user_data[timername])
         bot.send_message(job.context, text=messageText.format(timername,userlist))
         if halfTime:
             del self.half_dic[utimername]
         else:
             del self.hilfs_dic[utimername]
             del self.time_dic[utimername]
+            del self.user_data[utimername]
 
     def createTimerName(self, bot, update, args):
         try:
@@ -128,12 +131,14 @@ class TimerBot:
             job.schedule_removal()
             del chat_data[halftimename]
             del self.half_dic[halftimename]
+            del self.user_data[halftimename]
     
         job = chat_data[timername]
         job.schedule_removal()
         del chat_data[timername]
         del self.hilfs_dic[timername]
         del self.time_dic[timername]
+        del self.user_data[timername]
         if timername in self.anti_spam:
             del self.anti_spam[timername]
 
@@ -147,39 +152,28 @@ class TimerBot:
 
     def joinTimer(self, bot, chatId, username, timername):
         if not username in self.user_data[timername]:
-            usernames = self.user_data[timername]
-            usernames.append(username)
-            self.user_data[timername] = usernames
+            self.user_data[timername].append(username)
             try:
                 if username in self.anti_spam[timername]:
-                    usernames = self.anti_spam[timername]
-                    usernames.remove(username)
+                    self.anti_spam[timername].remove(username)
             except (KeyError):
-                usernames = []
-            self.anti_spam[timername] = usernames
+                self.anti_spam[timername] = []
             bot.send_message(chat_id=chatId, text='"{}": {} geht mit'.format(timername, username))
         else:
             bot.send_message(chat_id=chatId, text='Wie oft willst noch mitgehen?')
     
     def leaveTimer(self, bot, chatId, username, timername):
-        usernames = self.user_data[timername]
-        if username in usernames:
-            usernames.remove(username)
-            self.user_data[timername] = usernames
-
+        if username in self.user_data[timername]:
+            self.user_data[timername].remove(username)
             try:
-                usernames = self.anti_spam[timername]
+                self.anti_spam[timername].append(username)
             except (KeyError):
-                usernames = []
-            usernames.append(username)
-            self.anti_spam[timername] = usernames
+                self.anti_spam[timername] = []
 
             bot.send_message(chat_id=chatId, text='"{}": {} geht doch net mit'.format(timername, username))
         else:
             if not username in self.anti_spam[timername]:
-                usernames = self.anti_spam[timername]
-                usernames.append(username)
-                self.anti_spam[timername] = usernames
+                self.anti_spam[timername].append(username)
                 bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
             else:
                 bot.send_message(chat_id=chatId, text='Du gehst eh net mit....')
@@ -236,9 +230,7 @@ class TimerBot:
                 self.hilfs_dic[timername] = job
                 
                 username = self.createUser(update)
-                usernames = [username]
-                self.user_data[timername] = usernames
-    
+                self.user_data[timername] = [username]
                 self.creator[timername] = username
 
                 keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
@@ -295,8 +287,7 @@ class TimerBot:
             return
     
         userlist = ""
-        for u in self.user_data[timername]:
-            userlist = userlist + "@" + str(u) + " "
+        userlist = "@" + " @".join(self.user_data[timername])
         bot.send_message(chat_id=update.message.chat_id, text='"{}" wurde attackiert, auf gehts \n {}'.format(timername,userlist))
     
         self.cleanupEarly(timername, chat_data)
@@ -321,6 +312,7 @@ class TimerBot:
             self.half_dic.clear()
             self.time_dic.clear()
             self.anti_spam.clear()
+            self.user_data.clear()
     
             bot.send_message(chat_id=update.message.chat_id, text='Alle Timer abgebrochen!')
         else:
@@ -366,8 +358,7 @@ class TimerBot:
             if timername not in self.hilfs_dic:
                 bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" gibts net.....'.format(timername))
                 return
-            for u in self.user_data[timername]:
-                userlist = userlist + str(u) + " "
+            userlist = " ,".join(self.user_data[timername])
             difftime = self.time_dic[timername] - datetime.datetime.now()
             timeto = int(difftime.total_seconds() / 60)
             bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist))
@@ -459,33 +450,63 @@ class TimerBot:
         try:
             celcius = float(args[0])
             mordor = Decimal((celcius-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
-            bot.send_message(chat_id=update.message.chat_id, text="*%s°C* san *%s°M*" %(celcius, mordor))
+            bot.send_message(chat_id=update.message.chat_id, text="%s°C san %s°M" %(celcius, mordor))
         except:
             bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. kann i net umrechnen. vielleicht muast wos gscheits angeben")
 
     def mordor(self, bot, update, args):
 
+        username = self.createUser(update)
+
         texts = [
-              "wir ham {}°M* in {}",
+              "wir ham {}°M in {}",
               "Michse denken wir {}°M haben in {}",
               "Meine innere Stimme sagt mir wir haben {}°M in {}",
-              "Ein Ring sie zu knechten, ins Dunkel zu treibn...Aso, nur die Temperatur. Alsdann: {}°M in {}"
+              "Ein Ring sie zu knechten, ins Dunkel zu treibn...Aso, nur die Temperatur. Alsdann: {}°M in {}",
+              "Was sagt es mein Schatz? {}°M in {} mein Schatz. Garstige kleine Hobbits!",
+              "Es hat gmiatliche {}°M in {}",
+              "Mr " + username + " no home. {}°M in {} No no. I need more lemon pledge",
+              "Frag mich nicht. Ich will nicht denken. Ich bin voller Schoggi. ({}°M in {})",
+              "Wir ham {}°M in {}. Hasta la vista baby!",
+              "{}°M in {}. Yippee-ki-yay, Motherfucker",
+              "This is {}°M in {}!",
+              "Enough is Enough! I've had it with this motherfucking {}°M in this motherfucking {}.",
+              "You want the truth? You can't handle the truth! {}°M in {}",
+              "Goooood morning Chat. Wir ham {}°M in {}",
+              "Life is like a box of chocolate. You'll never no how many {}°M you'll get in {}",
+              "Alright alright alright wir ham {}°M in {}"
         ]
-
-        text = random.choice(texts)
 
         name = ""
         for arg in args:
             name += arg
             name += " "
 
+        name = name.strip()
+
+        cities = []
+        # search for the city
+        for city in self.city_list:
+            if name.lower() == city["name"].lower():
+                cities.clear()
+                cities.append(city["name"])
+                break
+            if name.lower() in city["name"].lower():
+                if city["name"] not in cities:
+                    cities.append(city["name"])
+
         try:
-            response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % name)
-            data = response.json()
-            temp=data["main"]["temp"]
-            mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
-            tmp_str = text.format(mordor, data["name"])
-            bot.send_message(chat_id=update.message.chat_id, text=tmp_str)
+            if len(cities) > 5:
+                bot.send_message(chat_id=update.message.chat_id, text="bist deppert. i hob viel zviele ortschaften gfunden. anti spam maßnahmen wurden ergriffen aka i gib nix aus.")
+            else:
+                for city in cities:
+                    response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=2859b9ab776091795c380b4696c1d58a&units=metric" % city)
+                    data = response.json()
+                    temp=data["main"]["temp"]
+                    mordor=Decimal((temp-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
+                    text = random.choice(texts)
+                    tmp_str = text.format(mordor, data["name"])
+                    bot.send_message(chat_id=update.message.chat_id, text=tmp_str)
         except:
             bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. hob kane wetterdaten für di\nprobiers mal mit /mordor <die ortschaft>")
 
@@ -498,6 +519,6 @@ class TimerBot:
     def error(self, bot, update, error):
         logger.warning('Update "%s" caused error "%s"', update, error)
 
-TelegramBot = TimerBot("ABCDEFGHIJLK")
+TelegramBot = TimerBot("TOKEN")
 
 TelegramBot.main()
