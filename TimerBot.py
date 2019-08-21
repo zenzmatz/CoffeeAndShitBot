@@ -358,7 +358,7 @@ class TimerBot:
             if timername not in self.hilfs_dic:
                 bot.send_message(chat_id=update.message.chat_id, text='Timer "{}" gibts net.....'.format(timername))
                 return
-            userlist = " ,".join(self.user_data[timername])
+            userlist = ", ".join(self.user_data[timername])
             difftime = self.time_dic[timername] - datetime.datetime.now()
             timeto = int(difftime.total_seconds() / 60)
             bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist))
