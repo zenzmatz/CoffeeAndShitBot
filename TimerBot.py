@@ -501,6 +501,12 @@ class TimerBot:
 
         name = name.strip()
 
+        if name.lower() == "mordor":
+            text = random.choice(texts)
+            tmp_str = text.format(1, "Mordor")
+            bot.send_message(chat_id=update.message.chat_id, text=tmp_str)
+            return
+
         cities = []
         # search for the city
         for city in self.city_list:
