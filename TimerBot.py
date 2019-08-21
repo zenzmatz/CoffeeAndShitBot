@@ -14,6 +14,7 @@ import json
 import random
 import os
 import difflib
+import inspect
 from decimal import Decimal, ROUND_HALF_UP
 
 #enable logging
@@ -23,7 +24,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 #get absolute path
-selfDir = os.path.dirname(os.path.realpath('__file__'))
+selfDir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 #define class
 class TimerBot:
@@ -516,7 +517,7 @@ class TimerBot:
                 bot.send_message(chat_id=update.message.chat_id, text="bist deppert. i hob viel zviele ortschaften gfunden. anti spam maßnahmen wurden ergriffen aka i gib nix aus.")
             elif len(cities) == 0:
                 posCities = difflib.get_close_matches(name.lower(),[c["name"].lower() for c in self.city_list],5)
-                cities = ", ".join(self.user_data[posCities])
+                cities = ", ".join(posCities)
                 bot.send_message(chat_id=update.message.chat_id, text='Manst vl an von den Ortn? {}'.format(cities))
             else:
                 for city in cities:
