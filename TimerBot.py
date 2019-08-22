@@ -524,7 +524,10 @@ class TimerBot:
             elif len(cities) == 0:
                 posCities = difflib.get_close_matches(name.lower(),[c["name"].lower() for c in self.city_list],5)
                 cities = ", ".join(posCities)
-                bot.send_message(chat_id=update.message.chat_id, text='Manst vl an von den Ortn? {}'.format(cities))
+                if len(posCities) == 0:
+                    bot.send_message(chat_id=update.message.chat_id, text='jetzt hast as gschafft. i find netamol irgendwos wos so ähnlich gschriebn is wie der bledsinn wos du eingeben hast')
+                else:
+                    bot.send_message(chat_id=update.message.chat_id, text='Manst vl an von de Ortschaftn? {}'.format(cities))
             else:
                 for city in cities:
                     response = requests.get("http://api.openweathermap.org/data/2.5/weather?q=%s&APPID=%s&units=metric" % (city,self.openWeatherApi))
