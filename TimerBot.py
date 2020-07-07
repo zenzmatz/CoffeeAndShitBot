@@ -52,6 +52,7 @@ class TimerBot:
         
         self.nukularPath = os.path.join(self.selfDir, 'resources/pictures/nucular_simpsons.jpg')
         self.kevinPath = os.path.join(self.selfDir, 'resources/gifs/nein.gif')
+        self.petePath = os.path.join(self.selfDir, 'resources/gifs/pete.gif')
         
     def main(self):
         """Run bot."""
@@ -71,6 +72,7 @@ class TimerBot:
         dp.add_handler(CommandHandler("list", self.list, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("nukular", self.nukular, pass_args=False, pass_chat_data=False))
         dp.add_handler(CommandHandler("kevin", self.kevin, pass_args=False, pass_chat_data=False))
+        dp.add_handler(CommandHandler("pistolpete", self.pete, pass_args=False, pass_chat_data=False))
         dp.add_handler(CommandHandler("attacke", self.attacke, pass_args=True, pass_chat_data=True))
         dp.add_handler(CommandHandler("block", self.block, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("deblock", self.deblock, pass_args=True, pass_chat_data=False))
@@ -593,6 +595,9 @@ class TimerBot:
     
     def kevin(self, bot, update):
         bot.send_document(chat_id=update.message.chat_id, document=open(self.kevinPath, 'rb'))
+
+    def pete(self, bot, update):
+        bot.send_document(chat_id=update.message.chat_id, document=open(self.petePath, 'rb'))
 
     def leet(self, bot, update, job_queue, chat_data):
         chat_id = update.message.chat_id
