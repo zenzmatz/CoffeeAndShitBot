@@ -87,17 +87,22 @@ class TimerBot:
         updater.idle()
 
 #   sub functions, used in main functions:
-    def createTimer(self, bot, job, messageText, halfTime = False):
+    def endOfTimer(self, bot, job, messageText, halfTime = False):
         userlist = ""
         for key,val in self.half_dic.items() if halfTime else self.hilfs_dic.items():
             if val == job:
                 utimername = key
         timername = utimername[9:] if halfTime else utimername
         userlist = "@" + " @".join(self.user_data[timername])
-        bot.send_message(job.context, text=messageText.format(timername,userlist))
         if halfTime:
             del self.half_dic[utimername]
+            keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
+                         InlineKeyboardButton("maybe", callback_data=timername+":2"),
+                         InlineKeyboardButton("menot", callback_data=timername+":0")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            bot.message.reply_text(messageText.format(timername,userlist), reply_markup=reply_markup)
         else:
+            bot.send_message(job.context, text=messageText.format(timername,userlist))
             del self.hilfs_dic[utimername]
             del self.time_dic[utimername]
             del self.user_data[utimername]
@@ -167,11 +172,11 @@ class TimerBot:
 
     def alarm(self, bot, job):
         messageText = '"{}" auf gehts: \n {}'
-        self.createTimer(bot, job, messageText)
+        self.endOfTimer(bot, job, messageText)
 
     def halftime(self, bot, job):
         messageText = 'Noch 5 Minuten bis "{}" !! \n {}'
-        self.createTimer(bot, job, messageText, True)
+        self.endOfTimer(bot, job, messageText, True)
 
     def joinTimer(self, bot, chatId, username, timername):
         if username in self.user_data_maybe[timername]:
@@ -624,6 +629,7 @@ class TimerBot:
             self.creator[timername] = username
 
             keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
+                         InlineKeyboardButton("maybe", callback_data=timername+":2"),
                          InlineKeyboardButton("menot", callback_data=timername+":0")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text('{} hat "{}" LEET-Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,self.time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
