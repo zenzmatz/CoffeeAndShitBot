@@ -76,6 +76,7 @@ class TimerBot:
         dp.add_handler(CommandHandler("wetter", self.weather, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("mordor", self.mordor, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("cm", self.cm, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("leet", self.leet, pass_args=False, pass_job_queue=True, pass_chat_data=True))
         dp.add_handler(CallbackQueryHandler(self.button))
 
         dp.add_error_handler(self.error)
@@ -542,6 +543,48 @@ class TimerBot:
     
     def kevin(self, bot, update):
         bot.send_document(chat_id=update.message.chat_id, document=open(self.kevinPath, 'rb'))
+
+    def leet(self, bot, update, job_queue, chat_data):
+        chat_id = update.message.chat_id
+        user = update.message.from_user
+
+        timername = 'LEET'
+        if timername in self.hilfs_dic:
+            bot.send_message(chat_id=update.message.chat_id, text='Den Timer "{}" gibts schon!!!!'.format(timername))
+            return
+        if timername in chat_data:
+            job = chat_data[timername]
+            job.schedule_removal()
+            del chat_data[timername]
+        try:
+            rawhour = 13
+            rawmin = 37
+            endtime = datetime.datetime.combine(datetime.date.today(), datetime.time(rawhour, rawmin, 0))
+            self.time_dic[timername] = endtime
+            difftime = endtime - datetime.datetime.now()
+            due = int(difftime.total_seconds() / 60)
+            if due > 5:
+                halftimename = 'halftime_' + timername
+                job = job_queue.run_once(self.halftime, (due-5)*60, context=chat_id)
+                chat_data[halftimename] = job
+                self.half_dic[halftimename] = job
+
+            job = job_queue.run_once(self.alarm, due*60, context=chat_id)
+            chat_data[timername] = job
+
+            self.hilfs_dic[timername] = job
+            
+            username = self.createUser(update)
+            self.user_data[timername] = [username]
+            self.creator[timername] = username
+
+            keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
+                         InlineKeyboardButton("menot", callback_data=timername+":0")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text('{} hat "{}" LEET-Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,self.time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
+
+        except (IndexError, ValueError):
+            bot.send_message(chat_id=update.message.chat_id, text='Usage: /leet')
 
     def error(self, bot, update, error):
         logger.warning('Update "%s" caused error "%s"', update, error)
