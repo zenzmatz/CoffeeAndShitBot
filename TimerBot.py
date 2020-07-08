@@ -97,15 +97,17 @@ class TimerBot:
                 utimername = key
         timername = utimername[9:] if halfTime else utimername
         userlist = "@" + " @".join(self.user_data[timername])
+        userlist_maybe = ""
+        userlist_maybe = "@" + " @".join(self.user_data_maybe[timername])
         if halfTime:
             del self.half_dic[utimername]
             keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
                          InlineKeyboardButton("maybe", callback_data=timername+":2"),
                          InlineKeyboardButton("menot", callback_data=timername+":0")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.message.reply_text(messageText.format(timername,userlist), reply_markup=reply_markup)
+            bot.message.reply_text(messageText.format(timername,userlist,userlist_maybe), reply_markup=reply_markup)
         else:
-            bot.send_message(job.context, text=messageText.format(timername,userlist))
+            bot.send_message(job.context, text=messageText.format(timername,userlist,userlist_maybe))
             del self.hilfs_dic[utimername]
             del self.time_dic[utimername]
             del self.user_data[utimername]
@@ -172,11 +174,11 @@ class TimerBot:
             del self.anti_spam[timername]
 
     def alarm(self, bot, job):
-        messageText = '"{}" auf gehts: \n {}'
+        messageText = '"{}" auf gehts: \n {} \n Entscheidets euch: \n {}'
         self.endOfTimer(bot, job, messageText)
 
     def halftime(self, bot, job):
-        messageText = 'Noch 5 Minuten bis "{}" !! \n {}'
+        messageText = 'Noch 5 Minuten bis "{}" !! \n {} {}'
         self.endOfTimer(bot, job, messageText, True)
 
     def joinTimer(self, bot, chatId, username, timername):
@@ -225,11 +227,15 @@ class TimerBot:
 
             bot.send_message(chat_id=chatId, text='"{}": {} geht doch net mit'.format(timername, username))
         if username not in self.user_data_maybe[timername] and username not in self.user_data[timername]:
-            if not username in self.anti_spam[timername]:
+            try:
+                if not username in self.anti_spam[timername]:
+                    self.anti_spam[timername].append(username)
+                    bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
+                else:
+                    bot.send_message(chat_id=chatId, text='Du gehst eh net mit....')
+            except (KeyError):
                 self.anti_spam[timername].append(username)
                 bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
-            else:
-                bot.send_message(chat_id=chatId, text='Du gehst eh net mit....')
 
 #   main functions, called by main
     def start(self, bot, update):
@@ -345,7 +351,9 @@ class TimerBot:
     
         userlist = ""
         userlist = "@" + " @".join(self.user_data[timername])
-        bot.send_message(chat_id=update.message.chat_id, text='"{}" wurde attackiert, auf gehts \n {}'.format(timername,userlist))
+        userlist_maybe = ""
+        userlist_maybe = "@" + " @".join(self.user_data_maybe[timername])
+        bot.send_message(chat_id=update.message.chat_id, text='"{}" wurde attackiert, auf gehts \n {} \n Entscheidets euch: \n {}'.format(timername,userlist,userlist_maybe))
     
         self.cleanupEarly(timername, chat_data)
     
