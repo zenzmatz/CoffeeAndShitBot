@@ -208,6 +208,14 @@ class TimerBot:
             bot.send_message(chat_id=chatId, text='@{} Wie oft willst noch vielleicht mitgehen?'.format(username))
     
     def leaveTimer(self, bot, chatId, username, timername):
+        if username in self.user_data_maybe[timername]:
+            self.user_data_maybe[timername].remove(username)
+            try:
+                self.anti_spam_maybe[timername].append(username)
+            except (KeyError):
+                self.anti_spam_maybe[timername] = []
+
+            bot.send_message(chat_id=chatId, text='"{}": {} geht doch net vielleicht mit'.format(timername, username))
         if username in self.user_data[timername]:
             self.user_data[timername].remove(username)
             try:
@@ -216,7 +224,7 @@ class TimerBot:
                 self.anti_spam[timername] = []
 
             bot.send_message(chat_id=chatId, text='"{}": {} geht doch net mit'.format(timername, username))
-        else:
+        if username not in self.user_data_maybe[timername] and username not in self.user_data[timername]:
             if not username in self.anti_spam[timername]:
                 self.anti_spam[timername].append(username)
                 bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
