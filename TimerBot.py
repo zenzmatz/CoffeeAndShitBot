@@ -53,7 +53,7 @@ class TimerBot:
         
         self.nukularPath = os.path.join(self.selfDir, 'resources/pictures/nucular_simpsons.jpg')
         self.kevinPath = os.path.join(self.selfDir, 'resources/gifs/nein.gif')
-        self.petePath = os.path.join(self.selfDir, 'resources/gifs/pete.gif')
+        self.petePath = os.path.join(self.selfDir, 'resources/gifs/pete1.gif')
         
     def main(self):
         """Run bot."""
@@ -606,6 +606,8 @@ class TimerBot:
         bot.send_document(chat_id=update.message.chat_id, document=open(self.kevinPath, 'rb'))
 
     def pete(self, bot, update):
+        randomPete = str(random.randint(1, 3))
+        self.petePath = os.path.join(self.selfDir, 'resources/gifs/pete' + randomPete + '.gif')
         bot.send_document(chat_id=update.message.chat_id, document=open(self.petePath, 'rb'))
 
     def leet(self, bot, update, job_queue, chat_data):
@@ -627,7 +629,10 @@ class TimerBot:
             self.time_dic[timername] = endtime
             difftime = endtime - datetime.datetime.now()
             due = int(difftime.total_seconds() / 60)
-            if due > 5:
+            if due < 0:
+                bot.send_message(chat_id=update.message.chat_id, text='LEET is heit schon vorbei')
+                return
+            elif due > 5:
                 halftimename = 'halftime_' + timername
                 job = job_queue.run_once(self.halftime, (due-5)*60, context=chat_id)
                 chat_data[halftimename] = job
