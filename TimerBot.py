@@ -37,6 +37,7 @@ class TimerBot:
         self.time_dic = {}
         self.creator = {}
         self.anti_spam = {}
+        self.anti_spam_maybe = {}
         self.black_list = {}
 
         self.cityListPath = os.path.join(self.selfDir, 'resources/city.list.json')
@@ -159,8 +160,6 @@ class TimerBot:
             job.schedule_removal()
             del chat_data[halftimename]
             del self.half_dic[halftimename]
-            del self.user_data[halftimename]
-            del self.user_data_maybe[halftimename]
     
         job = chat_data[timername]
         job.schedule_removal()
@@ -192,17 +191,10 @@ class TimerBot:
                 self.anti_spam[timername] = []
             bot.send_message(chat_id=chatId, text='"{}": {} geht mit'.format(timername, username))
         else:
-            bot.send_message(chat_id=chatId, text='Wie oft willst noch mitgehen?')
+            bot.send_message(chat_id=chatId, text='@{} Wie oft willst noch mitgehen?'.format(username))
 
     def joinTimerMaybe(self, bot, chatId, username, timername):
-        if not username in self.user_data[timername]:
-            try:
-                if username in self.anti_spam_maybe[timername]:
-                    self.anti_spam_maybe[timername].remove(username)
-            except (KeyError):
-                self.anti_spam_maybe[timername] = []
-            bot.send_message(chat_id=chatId, text='"{}": {} geht mit'.format(timername, username))
-        else:
+        if username in self.user_data[timername]:
             self.user_data[timername].remove(username)
         if not username in self.user_data_maybe[timername]:
             self.user_data_maybe[timername].append(username)
@@ -213,7 +205,7 @@ class TimerBot:
                 self.anti_spam_maybe[timername] = []
             bot.send_message(chat_id=chatId, text='"{}": {} geht vielleicht mit'.format(timername, username))
         else:
-            bot.send_message(chat_id=chatId, text='Wie oft willst noch mitgehen?')
+            bot.send_message(chat_id=chatId, text='@{} Wie oft willst noch vielleicht mitgehen?'.format(username))
     
     def leaveTimer(self, bot, chatId, username, timername):
         if username in self.user_data[timername]:
@@ -427,7 +419,7 @@ class TimerBot:
             userlist = ", ".join(self.user_data[timername])
             difftime = self.time_dic[timername] - datetime.datetime.now()
             timeto = int(difftime.total_seconds() / 60)
-            if not self.user_data_maybe[timername]:
+            if self.user_data_maybe[timername]:
                 userlistMaybe = ", ".join(self.user_data_maybe[timername])
                 bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {} \n Vielleicht: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist,userlistMaybe))
             else:
