@@ -441,11 +441,15 @@ class TimerBot:
             userlist = ", ".join(self.user_data[timername])
             difftime = self.time_dic[timername] - datetime.datetime.now()
             timeto = int(difftime.total_seconds() / 60)
+            keyboard = [[InlineKeyboardButton("#metoo", callback_data=timername+":1"),
+                         InlineKeyboardButton("#maybe", callback_data=timername+":2"),
+                         InlineKeyboardButton("#menot", callback_data=timername+":0")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             if self.user_data_maybe[timername]:
                 userlistMaybe = ", ".join(self.user_data_maybe[timername])
-                bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {} \n Vielleicht: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist,userlistMaybe))
+                bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {} \n Vielleicht: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist,userlistMaybe), reply_markup=reply_markup)
             else:
-                bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist))
+                bot.send_message(chat_id=update.message.chat_id, text='"{}" um {}, in {} Minuten: \n Teilnehmer: {}'.format(timername,self.time_dic[timername].strftime("%H:%M:%S"),timeto,userlist), reply_markup=reply_markup)
         except (IndexError, ValueError):
             timerlist = ""
             for key in self.hilfs_dic:
