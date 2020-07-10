@@ -65,6 +65,7 @@ class TimerBot:
     
         dp.add_handler(CommandHandler("start", self.start))
         dp.add_handler(CommandHandler("covfefe", self.covfefe, pass_args=True, pass_job_queue=True, pass_chat_data=True))
+        dp.add_handler(CommandHandler("c", self.covfefe, pass_args=True, pass_job_queue=True, pass_chat_data=True))
         dp.add_handler(CommandHandler("abort", self.abort, pass_args=True, pass_chat_data=True))
         dp.add_handler(CommandHandler("abortion", self.abortion, pass_chat_data=True))
         dp.add_handler(CommandHandler("metoo", self.metoo, pass_args=True, pass_chat_data=False))
@@ -102,9 +103,9 @@ class TimerBot:
             userlist_maybe = "\n Entscheidets euch: \n @" + " @".join(self.user_data_maybe[timername])
         if halfTime:
             del self.half_dic[utimername]
-            keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
-                         InlineKeyboardButton("maybe", callback_data=timername+":2"),
-                         InlineKeyboardButton("menot", callback_data=timername+":0")]]
+            keyboard = [[InlineKeyboardButton("#metoo", callback_data=timername+":1"),
+                         InlineKeyboardButton("#maybe", callback_data=timername+":2"),
+                         InlineKeyboardButton("#menot", callback_data=timername+":0")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             bot.send_message(job.context, text=messageText.format(timername,userlist,userlist_maybe), reply_markup=reply_markup)
         else:
@@ -299,9 +300,9 @@ class TimerBot:
                 self.anti_spam_maybe[timername] = []
                 self.creator[timername] = username
 
-                keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
-                             InlineKeyboardButton("maybe", callback_data=timername+":2"),
-                             InlineKeyboardButton("menot", callback_data=timername+":0")]]
+                keyboard = [[InlineKeyboardButton("#metoo", callback_data=timername+":1"),
+                             InlineKeyboardButton("#maybe", callback_data=timername+":2"),
+                             InlineKeyboardButton("#menot", callback_data=timername+":0")]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text('{} hat "{}" Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,self.time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
     
@@ -653,9 +654,9 @@ class TimerBot:
             self.anti_spam_maybe[timername] = []
             self.creator[timername] = username
 
-            keyboard = [[InlineKeyboardButton("metoo", callback_data=timername+":1"),
-                         InlineKeyboardButton("maybe", callback_data=timername+":2"),
-                         InlineKeyboardButton("menot", callback_data=timername+":0")]]
+            keyboard = [[InlineKeyboardButton("#metoo", callback_data=timername+":1"),
+                         InlineKeyboardButton("#maybe", callback_data=timername+":2"),
+                         InlineKeyboardButton("#menot", callback_data=timername+":0")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text('{} hat "{}" Timer für {}, in {} Minuten gestartet'.format(user['username'],timername,self.time_dic[timername].strftime("%H:%M:%S"),due), reply_markup=reply_markup)
 
