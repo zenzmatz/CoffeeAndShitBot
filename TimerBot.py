@@ -82,6 +82,7 @@ class TimerBot:
         dp.add_handler(CommandHandler("wetter", self.weather, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("mordor", self.mordor, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("cm", self.cm, pass_args=True, pass_chat_data=False))
+        dp.add_handler(CommandHandler("mc", self.mc, pass_args=True, pass_chat_data=False))
         dp.add_handler(CommandHandler("leet", self.leet, pass_args=False, pass_job_queue=True, pass_chat_data=True))
         dp.add_handler(CallbackQueryHandler(self.button))
 
@@ -539,6 +540,14 @@ class TimerBot:
             celcius = float(args[0])
             mordor = Decimal((celcius-29)/2).to_integral_value(rounding=ROUND_HALF_UP)
             bot.send_message(chat_id=update.message.chat_id, text="%s°C san %s°M" %(celcius, mordor))
+        except:
+            bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. kann i net umrechnen. vielleicht muast wos gscheits angeben")
+
+    def mc(self, bot, update, args):
+        try:
+            mordor = float(args[0])
+            celcius = Decimal((mordor*2)+29).to_integral_value(rounding=ROUND_HALF_UP)
+            bot.send_message(chat_id=update.message.chat_id, text="%s°M san %s°C" %(mordor, celcius))
         except:
             bot.send_message(chat_id=update.message.chat_id, text="irgendwos is schief gangen. kann i net umrechnen. vielleicht muast wos gscheits angeben")
 
