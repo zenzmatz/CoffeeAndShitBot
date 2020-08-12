@@ -221,7 +221,7 @@ class TimerBot:
                     self.anti_spam[timername].append(username)
                     bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
                 else:
-                    bot.send_message(chat_id=chatId, text='Du gehst eh net mit....')
+                    bot.send_message(chat_id=chatId, text='{}, du gehst eh net mit....'.format(username))
             except (KeyError):
                 self.anti_spam[timername].append(username)
                 bot.send_message(chat_id=chatId, text='"{}": {} geht net mit'.format(timername, username))
@@ -636,6 +636,14 @@ class TimerBot:
         user = update.message.from_user
     
         timername = 'LEET'
+        
+        if timername in self.hilfs_dic:
+            keyboard = [[InlineKeyboardButton("#metoo", callback_data=timername+":1"),
+                         InlineKeyboardButton("#maybe", callback_data=timername+":2"),
+                         InlineKeyboardButton("#menot", callback_data=timername+":0")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text('{} war schneller, Timer "{}" gibts schon....'.format(user['username'],timername), reply_markup=reply_markup)            
+            return
 
         if timername in chat_data:
             job = chat_data[timername]
